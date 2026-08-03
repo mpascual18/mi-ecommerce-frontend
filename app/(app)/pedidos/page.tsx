@@ -185,7 +185,7 @@ export default function PedidosPage() {
 
                   {p.notas_seguimiento && (
                     <p className="text-[11px] text-gray-500 italic bg-gray-50 p-2 rounded-lg border border-gray-100">
-                      "{p.notas_seguimiento}"
+                      &quot;{p.notas_seguimiento}&quot;
                     </p>
                   )}
                 </div>
