@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { API_URL } from '@/lib/api';
 import { useCart, soles } from './CartContext';
-import { FALLBACK_IMAGE, Producto, precioDe, precioAnteriorDe } from './constants';
+import { FALLBACK_IMAGE, Producto, precioDe, precioAnteriorDe, productoHref } from './constants';
 import { IconShieldCheck, IconTag, IconHome, IconLock, IconTruck, IconHeadset, IconPackageSearch } from './Icons';
 
 const TRUST_ITEMS = [
@@ -100,7 +100,7 @@ export default function HomeCatalog() {
 
           {productoDestacado && (
             <Link
-              href={`/producto/${productoDestacado.id}`}
+              href={productoHref(productoDestacado)}
               className="lg:col-span-5 bg-white text-brand-grafito p-6 rounded-3xl shadow-2xl border-2 border-brand-gold space-y-4 store-gold-glow block hover:-translate-y-1 transition-transform"
             >
               <div className="flex justify-between items-start gap-2">
@@ -191,7 +191,7 @@ export default function HomeCatalog() {
               const descuento = anterior ? Math.round(((anterior - precio) / anterior) * 100) : 0;
               return (
                 <div key={p.id} className="store-luxury-card bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-2xs flex flex-col justify-between">
-                  <Link href={`/producto/${p.id}`} className="relative overflow-hidden bg-slate-100 block">
+                  <Link href={productoHref(p)} className="relative overflow-hidden bg-slate-100 block">
                     {p.badge && p.badge !== 'SIN BADGE' && (
                       <span className="absolute top-3 left-3 bg-brand-red text-white text-[10px] font-heading font-extrabold px-2.5 py-1 rounded-md uppercase z-10 shadow-xs">{p.badge}</span>
                     )}
@@ -204,7 +204,7 @@ export default function HomeCatalog() {
                   <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                     <div className="space-y-1.5">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{p.categoria || 'General'}</span>
-                      <Link href={`/producto/${p.id}`} className="font-heading font-bold text-brand-grafito text-xs sm:text-sm line-clamp-2 hover:text-brand-red transition block">
+                      <Link href={productoHref(p)} className="font-heading font-bold text-brand-grafito text-xs sm:text-sm line-clamp-2 hover:text-brand-red transition block">
                         {p.nombre}
                       </Link>
                     </div>
@@ -222,7 +222,7 @@ export default function HomeCatalog() {
                           + Agregar
                         </button>
                         <Link
-                          href={`/producto/${p.id}`}
+                          href={productoHref(p)}
                           className="w-full bg-brand-red hover:bg-brand-darkred text-white text-[11px] font-heading font-extrabold py-2.5 px-2 rounded-xl transition text-center"
                         >
                           Ver Oferta

@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { API_URL } from '@/lib/api';
 import { useCart, soles } from './CartContext';
-import { FALLBACK_IMAGE, Producto, precioDe, precioAnteriorDe } from './constants';
+import { FALLBACK_IMAGE, Producto, precioDe, precioAnteriorDe, slugify, productoHref } from './constants';
 import { IconChevronLeft, IconBag, IconBolt, IconShieldCheck, IconTruck } from './Icons';
 
-export default function ProductPage({ id }: { id: string }) {
+export default function ProductPage({ slug }: { slug: string }) {
   const { addToCart, setCartOpen } = useCart();
   const [producto, setProducto] = useState<Producto | null>(null);
   const [relacionados, setRelacionados] = useState<Producto[]>([]);
@@ -20,22 +20,18 @@ export default function ProductPage({ id }: { id: string }) {
     setNoEncontrado(false);
     (async () => {
       try {
-        const [resProd, resLista] = await Promise.all([
-          fetch(`${API_URL}/api/productos/${id}`),
-          fetch(`${API_URL}/api/productos`),
-        ]);
+        const resLista = await fetch(`${API_URL}/api/productos`);
+        if (resLista.ok) {
+          const lista = await resLista.json();
+          const data = Array.isArray(lista) ? lista.find((p: Producto) => slugify(p.nombre) === slug) : null;
 
-        if (resProd.ok) {
-          const data = await resProd.json();
-          setProducto(data);
-
-          if (resLista.ok) {
-            const lista = await resLista.json();
-            if (Array.isArray(lista)) {
-              setRelacionados(
-                lista.filter((p: Producto) => String(p.id) !== String(id) && (p.categoria || 'General') === (data.categoria || 'General')).slice(0, 4)
-              );
-            }
+          if (data) {
+            setProducto(data);
+            setRelacionados(
+              lista.filter((p: Producto) => String(p.id) !== String(data.id) && (p.categoria || 'General') === (data.categoria || 'General')).slice(0, 4)
+            );
+          } else {
+            setNoEncontrado(true);
           }
         } else {
           setNoEncontrado(true);
@@ -46,7 +42,7 @@ export default function ProductPage({ id }: { id: string }) {
       }
       setCargando(false);
     })();
-  }, [id]);
+  }, [slug]);
 
   if (cargando) {
     return <main className="max-w-5xl mx-auto px-4 py-24 text-center text-sm font-bold text-slate-400">Cargando producto...</main>;
@@ -165,7 +161,7 @@ export default function ProductPage({ id }: { id: string }) {
               const pPrecio = precioDe(p);
               const pAnterior = precioAnteriorDe(p);
               return (
-                <Link key={p.id} href={`/producto/${p.id}`} className="store-luxury-card bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-2xs block">
+                <Link key={p.id} href={productoHref(p)} className="store-luxury-card bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-2xs block">
                   <img src={p.imagen_url || FALLBACK_IMAGE} alt={p.nombre} className="store-img-zoom w-full h-36 object-cover" />
                   <div className="p-3 space-y-1">
                     <h3 className="font-heading font-bold text-brand-grafito text-xs line-clamp-2">{p.nombre}</h3>
