@@ -19,13 +19,13 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  /* Marca P&R Store (tienda pública) */
+  /* Marca P&R Store (tienda pública) — valores oficiales del brand book */
   --color-brand-red: #A33240;
-  --color-brand-darkred: #721C26;
-  --color-brand-grafito: #1E293B;
-  --color-brand-charcoal: #0F172A;
-  --color-brand-grismedio: #64748B;
-  --color-brand-grisclaro: #F8FAFC;
+  --color-brand-darkred: #7D2530;
+  --color-brand-grafito: #333333;
+  --color-brand-charcoal: #333333;
+  --color-brand-grismedio: #777777;
+  --color-brand-grisclaro: #E6E6E6;
   --color-brand-gold: #D4AF37;
   --font-heading: 'Montserrat', sans-serif;
 }
