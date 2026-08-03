@@ -26,12 +26,9 @@ const Sidebar = () => {
       const stored = localStorage.getItem('pyr_user');
       if (stored) {
         setUser(JSON.parse(stored));
-      } else {
-        // Default Super Admin for demo
-        setUser({ nombre: 'Administrador PYR', correo: 'admin@pyrstore.pe', rol: 'admin' });
       }
     } catch (e) {
-      setUser({ nombre: 'Administrador PYR', correo: 'admin@pyrstore.pe', rol: 'admin' });
+      setUser(null);
     }
   }, []);
 
@@ -82,11 +79,20 @@ const Sidebar = () => {
 
       <div className="p-4 border-t border-slate-800 space-y-2">
         <Link
-          href="/login"
+          href="/"
+          className="block w-full text-center bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold py-2 rounded-xl transition border border-slate-700"
+        >
+          🛍️ Ver Tienda Web
+        </Link>
+        <button
+          onClick={() => {
+            try { localStorage.removeItem('pyr_user'); } catch (e) {}
+            window.location.href = '/login';
+          }}
           className="block w-full text-center bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold py-2 rounded-xl transition border border-slate-700"
         >
           🔑 Cambiar Perfil / Salir
-        </Link>
+        </button>
       </div>
     </div>
   );
