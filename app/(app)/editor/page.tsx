@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { API_URL } from '@/lib/api';
 
 type ThemeConfig = {
   storeName: string;
@@ -39,7 +40,7 @@ export default function EditorPlantillaPage() {
   const cargarConfig = async () => {
     setCargando(true);
     try {
-      const res = await fetch('http://localhost:4000/api/configuracion');
+      const res = await fetch(`${API_URL}/api/configuracion`);
       const data = await res.json();
       if (data) {
         setConfig((prev) => ({ ...prev, ...data }));
@@ -68,7 +69,7 @@ export default function EditorPlantillaPage() {
     setMensaje('');
 
     try {
-      const res = await fetch('http://localhost:4000/api/configuracion', {
+      const res = await fetch(`${API_URL}/api/configuracion`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config),

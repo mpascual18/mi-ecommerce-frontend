@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { API_URL } from '@/lib/api';
 
 type Usuario = {
   id: number;
@@ -24,7 +25,7 @@ export default function UsuariosPage() {
   const cargarUsuarios = async () => {
     setCargando(true);
     try {
-      const res = await fetch('http://localhost:4000/api/auth/usuarios');
+      const res = await fetch(`${API_URL}/api/auth/usuarios`);
       const data = await res.json();
       setUsuarios(data);
     } catch (err) {
@@ -43,7 +44,7 @@ export default function UsuariosPage() {
     setMensaje('');
 
     try {
-      const res = await fetch('http://localhost:4000/api/auth/usuarios', {
+      const res = await fetch(`${API_URL}/api/auth/usuarios`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nombre, correo, password, rol }),

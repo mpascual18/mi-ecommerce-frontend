@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Button from '@/components/ui/Button';
 import { useToast } from '@/components/ui/ToastProvider';
+import { API_URL } from '@/lib/api';
 
 type Producto = { id: number; nombre: string; sku: string; price_soles: number; stock: number };
 type ProductoSeleccionado = { id: number; nombre: string; sku: string; price_soles: number; cantidad: number };
@@ -29,7 +30,7 @@ export default function RegistrarVentaPage() {
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
-    fetch('http://localhost:4000/api/productos')
+    fetch(`${API_URL}/api/productos`)
       .then((res) => res.json())
       .then((data) => setProductos(data))
       .catch((err) => console.error('Error al cargar productos:', err));
@@ -85,27 +86,59 @@ export default function RegistrarVentaPage() {
 
     setEnviando(true);
     try {
-      const res = await fetch('http://localhost:4000/api/ventas', {
+      // 1) Crear (o encontrar) el cliente para obtener su id.
+      const resCliente = await fetch(`${API_URL}/api/clientes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cliente, productos: productosValidados }),
+        body: JSON.stringify(cliente),
       });
 
-      if (!res.ok) {
-        const errorText = await res.text();
+      if (!resCliente.ok) {
+        const errorText = await resCliente.text();
+        toast.error(`Error al registrar cliente: ${errorText}`);
+        return;
+      }
+
+      const { cliente: clienteCreado } = await resCliente.json();
+
+      // 2) Registrar la venta con el total calculado y los items del carrito.
+      const resVenta = await fetch(`${API_URL}/api/ventas`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cliente_id: clienteCreado.id,
+          total,
+          tipo: 'regular',
+          origen: 'tienda_fisica',
+          items: productosValidados.map((p) => ({
+            producto_id: p.id,
+            cantidad: p.cantidad,
+            precio_unitario: p.price_soles,
+          })),
+        }),
+      });
+
+      if (!resVenta.ok) {
+        const errorText = await resVenta.text();
         toast.error(`Error al registrar venta: ${errorText}`);
         return;
       }
 
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'boleta_venta.pdf';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      const nuevaVenta = await resVenta.json();
+
+      // 3) Descargar la boleta en PDF de la venta recién creada.
+      const resPdf = await fetch(`${API_URL}/api/ventas/${nuevaVenta.id}/pdf`);
+      if (resPdf.ok) {
+        const blob = await resPdf.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'boleta_venta.pdf';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }
 
       toast.success('Venta registrada correctamente.');
       setCliente(CLIENTE_VACIO);

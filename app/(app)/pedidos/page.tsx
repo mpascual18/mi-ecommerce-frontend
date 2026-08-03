@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { API_URL } from '@/lib/api';
 
 type Pedido = {
   id: number;
@@ -42,7 +43,7 @@ export default function PedidosPage() {
   const cargarPedidos = async () => {
     setCargando(true);
     try {
-      const res = await fetch('http://localhost:4000/api/pedidos');
+      const res = await fetch(`${API_URL}/api/pedidos`);
       const data = await res.json();
       setPedidos(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -65,7 +66,7 @@ export default function PedidosPage() {
     }
 
     try {
-      const res = await fetch(`http://localhost:4000/api/pedidos/${id}/estado`, {
+      const res = await fetch(`${API_URL}/api/pedidos/${id}/estado`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

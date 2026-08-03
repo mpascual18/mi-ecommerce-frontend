@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import DataTable from '@/components/ui/DataTable';
 import { useToast } from '@/components/ui/ToastProvider';
+import { API_URL } from '@/lib/api';
 
 export default function BajoStockPage() {
   const toast = useToast();
@@ -13,7 +14,7 @@ export default function BajoStockPage() {
     const obtener = async () => {
       setCargando(true);
       try {
-        const res = await fetch('http://localhost:4000/api/productos');
+        const res = await fetch(`${API_URL}/api/productos`);
         const data = await res.json();
         setProductos(data.filter((p) => Number(p.stock) <= 5));
       } catch (error) {

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_URL } from '@/lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,7 +17,7 @@ export default function LoginPage() {
     setCargando(true);
 
     try {
-      const res = await fetch('http://localhost:4000/api/auth/login', {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ correo, password }),
@@ -31,11 +32,9 @@ export default function LoginPage() {
         setError(data.error || 'Credenciales incorrectas');
       }
     } catch (err) {
-      // Fallback local session if backend server is starting
-      const demoRol = correo.includes('admin') ? 'admin' : correo.includes('vendedor') ? 'vendedor' : 'almacen';
-      const demoUser = { id: 1, nombre: 'Usuario PYR', correo, rol: demoRol };
-      localStorage.setItem('pyr_user', JSON.stringify(demoUser));
-      router.push('/dashboard');
+      // No se pudo contactar al backend: no se debe permitir el ingreso sin validar credenciales.
+      console.error('Error de conexión al iniciar sesión:', err);
+      setError('No se pudo conectar con el servidor. Intenta nuevamente en unos segundos.');
     } finally {
       setCargando(false);
     }

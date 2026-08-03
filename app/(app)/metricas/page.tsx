@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { API_URL } from '@/lib/api';
 
 type MetricasData = {
   totales: { total_pedidos: number; total_ingresos: number };
@@ -17,7 +18,7 @@ export default function MetricasPage() {
     const cargarMetricas = async () => {
       setCargando(true);
       try {
-        const res = await fetch('http://localhost:4000/api/metricas');
+        const res = await fetch(`${API_URL}/api/metricas`);
         const json = await res.json();
         setData(json);
       } catch (err) {

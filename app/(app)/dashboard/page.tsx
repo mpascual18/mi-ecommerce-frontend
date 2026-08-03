@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { API_URL } from '@/lib/api';
 
 type DashboardData = {
   estados: Array<{ estado: string; cantidad: number; monto: number }>;
@@ -18,7 +19,7 @@ export default function DashboardPage() {
     const cargarDashboard = async () => {
       setCargando(true);
       try {
-        const res = await fetch('http://localhost:4000/api/dashboard/kpis');
+        const res = await fetch(`${API_URL}/api/dashboard/kpis`);
         const json = await res.json();
         setData(json);
       } catch (err) {

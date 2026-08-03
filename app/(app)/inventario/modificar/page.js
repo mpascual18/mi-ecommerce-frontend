@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button';
 import FormField from '@/components/ui/FormField';
 import { useToast } from '@/components/ui/ToastProvider';
 import { useConfirm } from '@/components/ui/ConfirmDialogProvider';
+import { API_URL } from '@/lib/api';
 
 export default function ModificarInventarioPage() {
   const toast = useToast();
@@ -21,7 +22,7 @@ export default function ModificarInventarioPage() {
   const obtenerProductos = async () => {
     setCargando(true);
     try {
-      const res = await fetch('http://localhost:4000/api/productos');
+      const res = await fetch(`${API_URL}/api/productos`);
       const data = await res.json();
       setProductos(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -95,7 +96,7 @@ export default function ModificarInventarioPage() {
         stock: Number(productoEditando.stock) || 0,
       };
 
-      const res = await fetch(`http://localhost:4000/api/productos/${productoEditando.id}`, {
+      const res = await fetch(`${API_URL}/api/productos/${productoEditando.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -127,7 +128,7 @@ export default function ModificarInventarioPage() {
 
     setEliminando(true);
     try {
-      const res = await fetch(`http://localhost:4000/api/productos/${productoEditando.id}`, {
+      const res = await fetch(`${API_URL}/api/productos/${productoEditando.id}`, {
         method: 'DELETE',
       });
 
