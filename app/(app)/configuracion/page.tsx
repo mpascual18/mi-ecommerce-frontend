@@ -9,6 +9,8 @@ type ConfigData = {
   storeSub: string;
   announcementText: string;
   logoUrl: string;
+  umbralEnvioGratis?: number;
+  costoEnvioFijo?: number;
 };
 
 export default function ConfiguracionPage() {
@@ -18,6 +20,8 @@ export default function ConfiguracionPage() {
     storeSub: 'Calidad que te acompaña.',
     announcementText: '🔥 ¡OFERTA POR TIEMPO LIMITADO! PAGO CONTRA ENTREGA EN LIMA Y ENVÍOS A TODO EL PERÚ 🚛',
     logoUrl: '',
+    umbralEnvioGratis: 30,
+    costoEnvioFijo: 15,
   });
 
   const [cargando, setCargando] = useState(true);
@@ -33,7 +37,13 @@ export default function ConfiguracionPage() {
     try {
       const res = await fetch(`${API_URL}/api/configuracion`);
       const data = await res.json();
-      if (data) setConfig(data);
+      if (data) {
+        setConfig({
+          ...data,
+          umbralEnvioGratis: data.umbralEnvioGratis !== undefined ? Number(data.umbralEnvioGratis) : 30,
+          costoEnvioFijo: data.costoEnvioFijo !== undefined ? Number(data.costoEnvioFijo) : 15,
+        });
+      }
     } catch (err) {
       console.error('Error al cargar configuración:', err);
     } finally {
@@ -66,7 +76,7 @@ export default function ConfiguracionPage() {
       });
 
       if (res.ok) {
-        setMensaje('✅ Configuración de la tienda guardada correctamente.');
+        setMensaje('✅ Configuración general y módulo de condiciones de envío guardados correctamente.');
       } else {
         setMensaje('❌ Error al guardar la configuración.');
       }
@@ -78,32 +88,84 @@ export default function ConfiguracionPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-3xl pb-12">
       <div>
-        <h1 className="text-3xl font-black text-gray-900">⚙️ Configuración General de la Tienda Web</h1>
-        <p className="text-sm text-gray-500">Administra los números de contacto por WhatsApp, la marca y banners promocionales</p>
+        <h1 className="text-3xl font-black text-gray-900">⚙️ Configuración General y Condiciones de Envío</h1>
+        <p className="text-sm text-gray-500">Administra los parámetros de envío, WhatsApp de atención, marca y banners promocionales</p>
       </div>
 
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 space-y-6">
+      <div className="bg-white p-6 md:p-8 rounded-3xl shadow-xs border border-gray-200 space-y-6">
         {mensaje && (
-          <div className="text-xs font-bold p-3 rounded-xl bg-gray-100 border border-gray-200">
+          <div className="text-xs font-bold p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800">
             {mensaje}
           </div>
         )}
 
         {cargando ? (
           <div className="p-8 text-center text-gray-400 font-bold">
-            ⌛ Cargando datos de la tienda...
+            ⌛ Cargando parámetros del sistema...
           </div>
         ) : (
-          <form onSubmit={handleGuardar} className="space-y-5">
+          <form onSubmit={handleGuardar} className="space-y-6">
+            
+            {/* 🚚 MÓDULO DE REGLAS Y CONDICIONES DE ENVÍO */}
+            <div className="bg-slate-900 text-white p-5 rounded-2xl space-y-4 shadow-sm border border-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🚚</span>
+                <div>
+                  <h3 className="font-extrabold text-sm text-amber-300">MÓDULO DE CONDICIONES Y TARIFAS DE ENVÍO</h3>
+                  <p className="text-[11px] text-slate-300">
+                    Define las reglas dinámicas de envío gratis o tarifa fija que se aplicarán en el modal de pedido directo.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div>
+                  <label className="block text-xs font-bold text-slate-200 mb-1">
+                    Monto Umbral para Envío GRATIS (S/.) *
+                  </label>
+                  <p className="text-[10px] text-slate-400 mb-1">
+                    Pedidos iguales o superiores a este monto tendrán costo de envío S/. 0.00 (Ej: 30.00)
+                  </p>
+                  <input
+                    type="number"
+                    step="0.10"
+                    required
+                    value={config.umbralEnvioGratis}
+                    onChange={(e) => setConfig({ ...config, umbralEnvioGratis: Number(e.target.value) })}
+                    placeholder="30.00"
+                    className="w-full bg-slate-800 border border-slate-700 text-white font-mono font-black text-sm rounded-xl p-3 focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-200 mb-1">
+                    Costo Fijo de Envío Estándar (S/.) *
+                  </label>
+                  <p className="text-[10px] text-slate-400 mb-1">
+                    Se cobrará si el total del pedido es menor o igual a S/. 29.99 (Ej: 15.00)
+                  </p>
+                  <input
+                    type="number"
+                    step="0.50"
+                    required
+                    value={config.costoEnvioFijo}
+                    onChange={(e) => setConfig({ ...config, costoEnvioFijo: Number(e.target.value) })}
+                    placeholder="15.00"
+                    className="w-full bg-slate-800 border border-slate-700 text-white font-mono font-black text-sm rounded-xl p-3 focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* WhatsApp Number */}
             <div>
               <label className="block text-xs font-bold text-gray-800 mb-1">
                 Número de WhatsApp de Atención y Pedidos *
               </label>
               <p className="text-[11px] text-gray-500 mb-1">
-                A este número llegarán todos los pedidos generados desde las landings de Meta Ads y el catálogo web (Incluir código 51 de Perú).
+                A este número llegarán los mensajes de pedido rápido de WhatsApp (Incluir código 51 de Perú).
               </p>
               <input
                 type="tel"
@@ -174,9 +236,9 @@ export default function ConfiguracionPage() {
             <button
               type="submit"
               disabled={guardando}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold py-3.5 px-6 rounded-xl text-xs shadow-sm transition"
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold py-4 px-6 rounded-2xl text-xs shadow-md transition transform hover:-translate-y-0.5"
             >
-              {guardando ? 'Guardando...' : 'GUARDAR CONFIGURACIÓN DE TIENDA'}
+              {guardando ? 'Guardando Parámetros...' : '💾 GUARDAR CONFIGURACIÓN Y REGLAS DE ENVÍO'}
             </button>
           </form>
         )}

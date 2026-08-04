@@ -10,6 +10,8 @@ type Props = {
   promoElegida: { id: string; name: string; price: number };
   onClose: () => void;
   whatsappNumero?: string;
+  umbralEnvioGratis?: number;
+  costoEnvioFijo?: number;
 };
 
 export default function DirectOrderModal({
@@ -19,6 +21,8 @@ export default function DirectOrderModal({
   promoElegida,
   onClose,
   whatsappNumero = '51992001002',
+  umbralEnvioGratis = 30,
+  costoEnvioFijo = 15,
 }: Props) {
   const [nombre, setNombre] = useState('');
   const [celular, setCelular] = useState('');
@@ -27,6 +31,11 @@ export default function DirectOrderModal({
   const [referencia, setReferencia] = useState('');
   const [metodoPago, setMetodoPago] = useState('Pago Contra Entrega (Efectivo / Yape / Plin)');
   const [enviando, setEnviando] = useState(false);
+
+  // Cálculo de envío según regla dinámica (Gratis >= S/. 30.00, S/. 15.00 si es <= S/. 29.99)
+  const esEnvioGratis = promoElegida.price >= umbralEnvioGratis;
+  const costoEnvio = esEnvioGratis ? 0 : costoEnvioFijo;
+  const totalFinal = promoElegida.price + costoEnvio;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +49,7 @@ export default function DirectOrderModal({
 
     const isLima = distrito.toLowerCase().includes('lima') || !distrito.toLowerCase().includes('provincia');
 
-    // 1. Guardar en backend ERP/CRM PostgreSQL
+    // 1. Registrar automáticamente en el sistema integral ERP (PostgreSQL)
     try {
       await fetch(`${API_URL}/api/pedidos`, {
         method: 'POST',
@@ -51,7 +60,8 @@ export default function DirectOrderModal({
           direccion: `${direccion.trim()} (Ref: ${referencia.trim() || 'Sin ref'})`,
           distrito: distrito.trim(),
           provincia: isLima ? 'Lima' : distrito.trim(),
-          total: promoElegida.price,
+          total: totalFinal,
+          costo_envio: costoEnvio,
           origen: 'landing_producto',
           metodo_pago: metodoPago,
           items: [
@@ -67,39 +77,40 @@ export default function DirectOrderModal({
       console.warn('⚠️ No se pudo conectar al backend API, redirigiendo a WhatsApp:', err);
     }
 
-    // 2. Disparar eventos Meta Pixel
+    // 2. Disparar Meta Pixel Events
     if (typeof window !== 'undefined' && (window as any).fbq) {
       try {
         (window as any).fbq('track', 'Lead', {
           content_name: productoNombre,
-          value: promoElegida.price,
+          value: totalFinal,
           currency: 'PEN',
         });
         (window as any).fbq('track', 'Purchase', {
           content_name: productoNombre,
-          value: promoElegida.price,
+          value: totalFinal,
           currency: 'PEN',
         });
       } catch (e) {}
     }
 
-    // 3. Abrir WhatsApp con mensaje estructurado
+    // 3. Redirigir al cliente a WhatsApp con datos completos del pedido
     const msg = `🛒 *NUEVO PEDIDO DIRECTO - P&R STORE*
 ----------------------------------------
 📦 *Producto:* ${productoNombre}
-🎁 *Combo:* ${promoElegida.name}
-💰 *Total a Pagar:* S/. ${promoElegida.price.toFixed(2)}
+🎁 *Combo Elegido:* ${promoElegida.name} (S/. ${promoElegida.price.toFixed(2)})
+🚚 *Envío:* ${esEnvioGratis ? '¡GRATIS! 🎉' : `S/. ${costoEnvio.toFixed(2)}`}
+💰 *TOTAL A PAGAR:* S/. ${totalFinal.toFixed(2)}
 
 👤 *DATOS DEL CLIENTE:*
 • *Nombre:* ${nombre.trim()}
 • *Teléfono:* ${celular.trim()}
 • *Distrito/Ciudad:* ${distrito.trim()}
-• *Dirección:* ${direccion.trim()}
+• *Dirección Exacta:* ${direccion.trim()}
 • *Referencia:* ${referencia.trim() || 'Sin referencia'}
 💳 *Método de Pago:* ${metodoPago}
 
 ----------------------------------------
-🚚 *Por favor confirmar stock y horario de entrega.*`;
+🚚 *Por favor confirmar horario de entrega.*`;
 
     const cleanNumber = whatsappNumero.replace(/\D/g, '') || '51992001002';
     const fullNumber = cleanNumber.startsWith('51') ? cleanNumber : `51${cleanNumber}`;
@@ -133,15 +144,27 @@ export default function DirectOrderModal({
         {/* Body Form */}
         <form onSubmit={handleSubmit} className="p-5 md:p-6 overflow-y-auto space-y-4 text-xs">
           
-          {/* Producto Elegido Summary */}
-          <div className="bg-slate-900 text-white p-3.5 rounded-2xl flex justify-between items-center shadow-xs">
-            <div>
-              <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block">Producto Seleccionado:</span>
-              <span className="font-heading font-black text-xs block text-white line-clamp-1">{productoNombre}</span>
-              <span className="text-[11px] text-slate-300 font-semibold">{promoElegida.name}</span>
+          {/* Resumen Producto y Desglose de Envío */}
+          <div className="bg-slate-900 text-white p-4 rounded-2xl space-y-2 shadow-xs">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+              <div>
+                <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block">Producto Seleccionado:</span>
+                <span className="font-heading font-black text-xs block text-white line-clamp-1">{productoNombre}</span>
+                <span className="text-[11px] text-slate-300 font-semibold">{promoElegida.name}</span>
+              </div>
+              <span className="text-base font-heading font-black text-white">S/. {promoElegida.price.toFixed(2)}</span>
             </div>
-            <div className="text-right shrink-0">
-              <span className="text-xl font-heading font-black text-amber-300">S/. {promoElegida.price.toFixed(2)}</span>
+
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-slate-300 font-semibold">Costo de Envío:</span>
+              <span className={`font-black ${esEnvioGratis ? 'text-emerald-400' : 'text-amber-300'}`}>
+                {esEnvioGratis ? '¡ENVÍO GRATIS! 🎉' : `S/. ${costoEnvio.toFixed(2)}`}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center pt-2 border-t border-slate-700 text-sm">
+              <span className="font-black text-white uppercase">TOTAL A PAGAR:</span>
+              <span className="text-xl font-heading font-black text-amber-300">S/. {totalFinal.toFixed(2)}</span>
             </div>
           </div>
 
@@ -255,13 +278,13 @@ export default function DirectOrderModal({
             </div>
           </div>
 
-          {/* Botón Submit */}
+          {/* Botón Confirmar Pedido (Sin la palabra registrar) */}
           <button
             type="submit"
             disabled={enviando}
             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-heading font-black py-4 px-4 rounded-2xl text-sm shadow-xl transition flex items-center justify-center gap-2 transform hover:-translate-y-0.5 disabled:opacity-60"
           >
-            <span>{enviando ? 'PROCESANDO PEDIDO...' : '¡CONFIRMAR PEDIDO Y REGISTRAR!'}</span>
+            <span>{enviando ? 'PROCESANDO PEDIDO...' : '¡CONFIRMAR PEDIDO!'}</span>
           </button>
         </form>
       </div>
