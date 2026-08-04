@@ -168,10 +168,16 @@ export default function ModificarInventarioPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+const PLANTILLA_DESCRIPCION_DEFAULT = `<p style="text-align: center;"><strong>🔥 ¡OFERTA ESPECIAL P&amp;R STORE! ✨</strong></p><p style="text-align: center;">✨ ¿Cansado de productos de baja calidad? ¡Este nuevo modelo lo cambia todo! 🚀 Con materiales premium de importación directa.</p><p style="text-align: left;">✔️ <strong>Calidad comprobada</strong> – Garantía directa P&amp;R Store<br />✔️ <strong>Cero complicaciones</strong> – Pago contra entrega en Lima y envíos a todo el Perú por Shalom/Olva<br />✔️ <strong>Diseño exclusivo</strong> – Practicidad y durabilidad asegurada para tu hogar</p>`;
+
   const abrirNuevoProducto = () => {
-    setProductoEditando({ ...PRODUCTO_VACIO });
+    setProductoEditando({
+      ...PRODUCTO_VACIO,
+      descripcion: PLANTILLA_DESCRIPCION_DEFAULT,
+      badge: 'MÁS VENDIDO',
+    });
     setModalKey((k) => k + 1);
-    setMostrarOferta(false);
+    setMostrarOferta(true);
   };
 
   const abrirEdicion = (p) => {
@@ -694,6 +700,47 @@ export default function ModificarInventarioPage() {
                     <option value="5">Grande</option>
                     <option value="7">Título</option>
                   </select>
+
+                  {/* BOTONES DE ALINEACIÓN DE PÁRRAFO */}
+                  <div className="flex items-center gap-0.5 border-l border-r border-gray-300 px-1 my-0.5">
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => formatearDescripcion('justifyLeft')}
+                      className="w-7 h-7 rounded-lg bg-white hover:bg-gray-200 text-xs font-bold flex items-center justify-center"
+                      title="Alinear a la Izquierda"
+                    >
+                      ⬅️
+                    </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => formatearDescripcion('justifyCenter')}
+                      className="w-7 h-7 rounded-lg bg-white hover:bg-gray-200 text-xs font-bold flex items-center justify-center"
+                      title="Alinear al Centro"
+                    >
+                      ↔️
+                    </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => formatearDescripcion('justifyRight')}
+                      className="w-7 h-7 rounded-lg bg-white hover:bg-gray-200 text-xs font-bold flex items-center justify-center"
+                      title="Alinear a la Derecha"
+                    >
+                      ➡️
+                    </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => formatearDescripcion('justifyFull')}
+                      className="w-7 h-7 rounded-lg bg-white hover:bg-gray-200 text-xs font-bold flex items-center justify-center"
+                      title="Justificar Párrafo"
+                    >
+                      ↕️
+                    </button>
+                  </div>
+
                   <button
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}

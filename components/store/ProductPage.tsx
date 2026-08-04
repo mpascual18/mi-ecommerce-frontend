@@ -421,7 +421,7 @@ export default function ProductPage({ slug }: { slug: string }) {
           </div>
 
           <div
-            className="text-sm text-slate-600 leading-relaxed whitespace-pre-line [&_img]:rounded-xl [&_img]:max-w-full [&_img]:my-2"
+            className="text-sm text-slate-600 leading-relaxed [&_p]:mb-2.5 [&_img]:rounded-xl [&_img]:max-w-full [&_img]:my-2"
             dangerouslySetInnerHTML={{
               __html: producto.descripcion ? sanearDescripcionHtml(producto.descripcion) : 'Producto importado de alta calidad.',
             }}
