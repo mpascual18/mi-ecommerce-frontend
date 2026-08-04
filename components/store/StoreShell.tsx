@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CartProvider, useCart, soles } from './CartContext';
@@ -42,32 +42,32 @@ function Ticker() {
 }
 
 function Header() {
-  const { config } = useCart();
+  const { config, totalUnidades, setCartOpen } = useCart();
   const router = useRouter();
   const [busqueda, setBusqueda] = useState('');
 
   function buscar(e: React.FormEvent) {
     e.preventDefault();
     const q = busqueda.trim();
-    router.push(q ? `/?q=${encodeURIComponent(q)}` : '/');
+    router.push(q ? `/#catalogo?q=${encodeURIComponent(q)}` : '/#catalogo');
   }
 
   return (
-    <header className="store-glass-header border-b border-slate-200/80 sticky top-0 z-30 shadow-xs">
+    <header className="store-glass-header border-b border-slate-200/80 sticky top-0 z-30 shadow-xs backdrop-blur-md bg-white/90">
       <div className="max-w-7xl mx-auto px-4 py-3.5 flex items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-3 group shrink-0">
-          <div className="w-12 h-12 rounded-2xl bg-brand-red flex items-center justify-center text-white shadow-md p-2 shrink-0 overflow-hidden">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-red-700 to-red-600 flex items-center justify-center text-white shadow-md p-2 shrink-0 overflow-hidden group-hover:scale-105 transition-transform duration-300">
             {config.logoUrl ? (
               <img src={config.logoUrl} alt={config.storeName} className="w-full h-full object-cover rounded-xl" />
             ) : (
-              <span className="font-heading font-black text-lg">P&R</span>
+              <span className="font-heading font-black text-xl tracking-tighter">P&R</span>
             )}
           </div>
           <div className="hidden sm:block">
-            <span className="text-xl md:text-2xl font-heading font-black text-brand-red tracking-tight block leading-none">
-              {config.storeName.replace('Store', '').trim()} <span className="text-brand-grafito">Store</span>
+            <span className="text-xl md:text-2xl font-heading font-black text-red-600 tracking-tight block leading-none">
+              {config.storeName.replace('Store', '').trim()} <span className="text-slate-900">Store</span>
             </span>
-            <span className="text-[11px] text-brand-red uppercase tracking-wider block font-semibold mt-1">{config.storeSub}</span>
+            <span className="text-[10px] text-red-600 uppercase tracking-widest block font-bold mt-1">{config.storeSub}</span>
           </div>
         </Link>
 
@@ -77,29 +77,30 @@ function Header() {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="¿Qué buscas para tu hogar o cocina?..."
-            className="w-full bg-slate-100 border border-slate-200 text-xs rounded-full py-2.5 pl-9 pr-4 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-red shadow-inner transition"
+            className="w-full bg-slate-100 border border-slate-200 text-xs rounded-full py-2.5 pl-10 pr-4 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-600 shadow-inner transition"
           />
-          <IconSearch className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <IconSearch className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
         </form>
 
         <div className="flex items-center gap-2 md:gap-3">
           <Link
             href="/login"
-            className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-brand-grafito hover:text-brand-red bg-slate-100 hover:bg-slate-200/70 px-4 py-2.5 rounded-full transition border border-slate-200"
+            className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-red-600 bg-slate-100 hover:bg-slate-200/70 px-4 py-2.5 rounded-full transition border border-slate-200"
           >
-            <IconKey className="w-4 h-4 text-brand-red" />
+            <IconKey className="w-4 h-4 text-red-600" />
             <span>Acceso al Sistema</span>
           </Link>
 
-          <a
-            href={linkWhatsapp(config.whatsappNumber, `Hola ${config.storeName}, quiero más información sobre sus productos 🙂`)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="relative bg-emerald-600 hover:bg-emerald-700 text-white p-2.5 md:px-5 md:py-2.5 rounded-full font-bold text-xs md:text-sm flex items-center gap-2 shadow-md hover:shadow-lg transition"
+          <button
+            onClick={() => setCartOpen(true)}
+            className="relative bg-red-600 hover:bg-red-700 text-white p-2.5 md:px-5 md:py-2.5 rounded-full font-heading font-black text-xs md:text-sm flex items-center gap-2 shadow-md hover:shadow-lg transition"
           >
-            <IconWhatsapp className="w-4 h-4" />
-            <span className="hidden md:inline font-heading tracking-wide">WhatsApp</span>
-          </a>
+            <IconBag className="w-4 h-4 text-amber-300" />
+            <span className="hidden md:inline font-heading tracking-wide">Carrito</span>
+            <span className="bg-amber-400 text-slate-950 text-xs font-black px-2 py-0.5 rounded-full shadow-xs">
+              {totalUnidades}
+            </span>
+          </button>
         </div>
       </div>
     </header>
@@ -198,7 +199,7 @@ function LiveSalesProofToast() {
             <span className="text-brand-red">{activeToast.name}</span> de {activeToast.district}
           </p>
           <p className="text-slate-600">
-            Compró <strong class="text-slate-900">{activeToast.product}</strong>
+            Compró <strong className="text-slate-900">{activeToast.product}</strong>
           </p>
           <p className="text-[9px] text-slate-400 font-semibold mt-0.5"> Verified Purchase • {activeToast.time}</p>
         </div>
