@@ -124,7 +124,24 @@ export default function ProductPage({ slug }: { slug: string }) {
   const precio = precioDe(producto);
   const anterior = precioAnteriorDe(producto);
   const descuento = anterior ? Math.round(((anterior - precio) / anterior) * 100) : 0;
-  const precioCombo = qty === 1 ? precio : qty === 2 ? precio * 1.8 : precio * 2.4;
+
+  // Oferta manual por cantidad (configurada en el ERP). Si el admin la definió,
+  // tiene prioridad sobre el cálculo automático (precio * 1.8 / * 2.4). El precio
+  // "antes" tachado siempre se calcula con el precio NORMAL (price_soles), no con
+  // el de oferta unitaria.
+  const oferta2u =
+    producto.oferta_2u_precio !== undefined && producto.oferta_2u_precio !== null && producto.oferta_2u_precio !== ''
+      ? Number(producto.oferta_2u_precio)
+      : null;
+  const oferta3u =
+    producto.oferta_3u_precio !== undefined && producto.oferta_3u_precio !== null && producto.oferta_3u_precio !== ''
+      ? Number(producto.oferta_3u_precio)
+      : null;
+  const precioNormalUnitario = Number(producto.price_soles) || precio;
+  const antes2u = precioNormalUnitario * 2;
+  const antes3u = precioNormalUnitario * 3;
+
+  const precioCombo = qty === 1 ? precio : qty === 2 ? oferta2u ?? precio * 1.8 : oferta3u ?? precio * 2.4;
   const galeria = galeriaCompleta(producto);
   const envio = calcularEnvio(precioCombo);
 
@@ -219,8 +236,14 @@ export default function ProductPage({ slug }: { slug: string }) {
               className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-bold focus:ring-2 focus:ring-brand-red"
             >
               <option value={1}>1 Unidad - {soles(precio * 1)}</option>
-              <option value={2}>2 Unidades (Combo Pareja) - {soles(precio * 1.8)}</option>
-              <option value={3}>3 Unidades (Pack Familiar) - {soles(precio * 2.4)}</option>
+              <option value={2}>
+                2 Unidades (Combo Pareja) - {soles(oferta2u ?? precio * 1.8)}
+                {oferta2u ? ` (antes ${soles(antes2u)})` : ''}
+              </option>
+              <option value={3}>
+                3 Unidades (Pack Familiar) - {soles(oferta3u ?? precio * 2.4)}
+                {oferta3u ? ` (antes ${soles(antes3u)})` : ''}
+              </option>
             </select>
 
             {envio.gratis ? (

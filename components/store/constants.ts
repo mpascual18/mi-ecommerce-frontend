@@ -25,6 +25,10 @@ export type Producto = {
   beneficios?: string;
   galeria_urls?: string;
   gif_url?: string;
+  /** Precios manuales configurados en el ERP para compras de 2 y 3 unidades.
+   * Si están presentes, tienen prioridad sobre el cálculo automático de combo. */
+  oferta_2u_precio?: number | string | null;
+  oferta_3u_precio?: number | string | null;
 };
 
 /**

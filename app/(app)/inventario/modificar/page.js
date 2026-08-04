@@ -20,6 +20,8 @@ const PRODUCTO_VACIO = {
   imagen_url: '',
   descripcion: '',
   galeria_urls: '',
+  oferta_2u_precio: '',
+  oferta_3u_precio: '',
 };
 
 const MAX_IMAGENES = 5;
@@ -84,6 +86,52 @@ function lineasA(texto) {
     .filter(Boolean);
 }
 
+// Campos compartidos de precio manual por 2 y 3 unidades. Se usan tanto en el
+// modal de creación/edición del producto (toggle inline) como en el módulo
+// dedicado "Ofertas por Cantidad". El precio "antes" (tachado) siempre se
+// calcula con el precio NORMAL del producto (no el de oferta unitaria).
+function CamposOfertaCantidad({ precioNormal, valor2u, valor3u, onChange2u, onChange3u }) {
+  const antes2u = precioNormal * 2;
+  const antes3u = precioNormal * 3;
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label className="block text-[11px] font-bold text-gray-600 mb-1">Precio por 2 unidades (S/)</label>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          value={valor2u}
+          onChange={(e) => onChange2u(e.target.value)}
+          placeholder="Ej. 49.99"
+          className="w-full bg-white border border-gray-300 rounded-xl p-2 text-xs font-bold focus:ring-2 focus:ring-red-500 focus:outline-none"
+        />
+        <p className="text-[10px] text-gray-400 mt-1">
+          Precio antes (tachado): <span className="line-through">S/ {antes2u.toFixed(2)}</span>
+        </p>
+      </div>
+      <div>
+        <label className="block text-[11px] font-bold text-gray-600 mb-1">Precio por 3 unidades (S/)</label>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          value={valor3u}
+          onChange={(e) => onChange3u(e.target.value)}
+          placeholder="Ej. 59.99"
+          className="w-full bg-white border border-gray-300 rounded-xl p-2 text-xs font-bold focus:ring-2 focus:ring-red-500 focus:outline-none"
+        />
+        <p className="text-[10px] text-gray-400 mt-1">
+          Precio antes (tachado): <span className="line-through">S/ {antes3u.toFixed(2)}</span>
+        </p>
+      </div>
+      <p className="sm:col-span-2 text-[10px] text-gray-400">
+        Deja los campos vacíos para usar el cálculo automático de la tienda. Si guardas un valor aquí, se mostrará tal cual en la página del producto.
+      </p>
+    </div>
+  );
+}
+
 export default function ModificarInventarioPage() {
   const toast = useToast();
   const confirm = useConfirm();
@@ -94,6 +142,10 @@ export default function ModificarInventarioPage() {
   const [eliminando, setEliminando] = useState(false);
   const [subiendoImagenes, setSubiendoImagenes] = useState(false);
   const [modalKey, setModalKey] = useState(0);
+  const [tabActiva, setTabActiva] = useState('inventario'); // 'inventario' | 'ofertas'
+  const [mostrarOferta, setMostrarOferta] = useState(false);
+  const [productoOfertaSeleccionado, setProductoOfertaSeleccionado] = useState(null);
+  const [guardandoOferta, setGuardandoOferta] = useState(false);
   const descripcionRef = useRef(null);
   const imagenDescripcionInputRef = useRef(null);
 
@@ -119,11 +171,64 @@ export default function ModificarInventarioPage() {
   const abrirNuevoProducto = () => {
     setProductoEditando({ ...PRODUCTO_VACIO });
     setModalKey((k) => k + 1);
+    setMostrarOferta(false);
   };
 
   const abrirEdicion = (p) => {
     setProductoEditando(p);
     setModalKey((k) => k + 1);
+    setMostrarOferta(!!(p.oferta_2u_precio || p.oferta_3u_precio));
+  };
+
+  const abrirOfertaProducto = (p) => {
+    setProductoOfertaSeleccionado({ ...p });
+  };
+
+  const guardarOferta = async () => {
+    if (!productoOfertaSeleccionado) return;
+    setGuardandoOferta(true);
+    try {
+      const payload = {
+        ...productoOfertaSeleccionado,
+        price_soles: Number(productoOfertaSeleccionado.price_soles) || 0,
+        price_oferta: productoOfertaSeleccionado.price_oferta ? Number(productoOfertaSeleccionado.price_oferta) : null,
+        stock: Number(productoOfertaSeleccionado.stock) || 0,
+        oferta_2u_precio:
+          productoOfertaSeleccionado.oferta_2u_precio !== '' && productoOfertaSeleccionado.oferta_2u_precio != null
+            ? Number(productoOfertaSeleccionado.oferta_2u_precio)
+            : null,
+        oferta_3u_precio:
+          productoOfertaSeleccionado.oferta_3u_precio !== '' && productoOfertaSeleccionado.oferta_3u_precio != null
+            ? Number(productoOfertaSeleccionado.oferta_3u_precio)
+            : null,
+      };
+
+      const res = await fetch(`${API_URL}/api/productos/${productoOfertaSeleccionado.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        toast.success('¡Oferta por cantidad guardada!');
+        setProductoOfertaSeleccionado(null);
+        obtenerProductos();
+      } else {
+        let mensaje = 'Error al guardar la oferta.';
+        try {
+          const cuerpo = await res.json();
+          if (cuerpo?.error) mensaje = cuerpo.error;
+        } catch {
+          // respuesta sin JSON, se usa el mensaje genérico
+        }
+        toast.error(mensaje);
+      }
+    } catch (error) {
+      console.error('Error al guardar oferta por cantidad:', error);
+      toast.error('No se pudo conectar con el servidor.');
+    } finally {
+      setGuardandoOferta(false);
+    }
   };
 
   // Sincroniza el contenido del editor de descripción cada vez que se abre el modal
@@ -251,6 +356,16 @@ export default function ModificarInventarioPage() {
         price_soles: Number(productoEditando.price_soles) || 0,
         price_oferta: productoEditando.price_oferta ? Number(productoEditando.price_oferta) : null,
         stock: Number(productoEditando.stock) || 0,
+        // Si el admin cerró el panel "¿Oferta por cantidad?" se limpian los valores,
+        // aunque hubiera algo escrito antes de colapsarlo.
+        oferta_2u_precio:
+          mostrarOferta && productoEditando.oferta_2u_precio !== '' && productoEditando.oferta_2u_precio != null
+            ? Number(productoEditando.oferta_2u_precio)
+            : null,
+        oferta_3u_precio:
+          mostrarOferta && productoEditando.oferta_3u_precio !== '' && productoEditando.oferta_3u_precio != null
+            ? Number(productoEditando.oferta_3u_precio)
+            : null,
       };
 
       const res = await fetch(`${API_URL}/api/productos${esNuevo ? '' : `/${productoEditando.id}`}`, {
@@ -317,12 +432,42 @@ export default function ModificarInventarioPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center gap-4 flex-wrap">
         <div>
-          <h1 className="text-3xl font-black text-gray-900">✏️ Modificar Inventario & Catálogo Web</h1>
-          <p className="text-sm text-gray-500">Edita imágenes, precios de oferta, insignias y stock sincronizado en la web</p>
+          <h1 className="text-3xl font-black text-gray-900">🛍️ Catálogo & Productos</h1>
+          <p className="text-sm text-gray-500">
+            {tabActiva === 'inventario'
+              ? 'Edita imágenes, precios de oferta, insignias y stock sincronizado en la web'
+              : 'Configura precios manuales para compras de 2 y 3 unidades'}
+          </p>
         </div>
-        <Button onClick={abrirNuevoProducto}>➕ Nuevo Producto</Button>
+        {tabActiva === 'inventario' && <Button onClick={abrirNuevoProducto}>➕ Nuevo Producto</Button>}
       </div>
 
+      <div className="flex gap-2 border-b border-gray-200">
+        <button
+          type="button"
+          onClick={() => setTabActiva('inventario')}
+          className={`px-4 py-2.5 text-sm font-bold rounded-t-xl transition ${
+            tabActiva === 'inventario'
+              ? 'bg-white border border-b-0 border-gray-200 text-red-600'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          📦 Modificar Inventario y Catálogo
+        </button>
+        <button
+          type="button"
+          onClick={() => setTabActiva('ofertas')}
+          className={`px-4 py-2.5 text-sm font-bold rounded-t-xl transition ${
+            tabActiva === 'ofertas'
+              ? 'bg-white border border-b-0 border-gray-200 text-red-600'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          🏷️ Ofertas por Cantidad
+        </button>
+      </div>
+
+      {tabActiva === 'inventario' && (
       <DataTable
         loading={cargando}
         rows={productos}
@@ -373,6 +518,64 @@ export default function ModificarInventarioPage() {
           },
         ]}
       />
+      )}
+
+      {tabActiva === 'ofertas' && (
+        <DataTable
+          loading={cargando}
+          rows={productos}
+          rowKey={(p) => p.id}
+          searchPlaceholder="Buscar por nombre, SKU o categoría..."
+          searchableText={(p) => `${p.nombre} ${p.sku ?? ''} ${p.categoria ?? ''}`}
+          emptyMessage="No hay productos registrados. Primero agrega productos en Modificar Inventario y Catálogo."
+          columns={[
+            {
+              key: 'imagen',
+              header: 'Imagen',
+              render: (p) => (
+                <div className="w-12 h-12 bg-white border border-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
+                  <img
+                    src={p.imagen_url || 'https://images.unsplash.com/photo-1570197788417-0e82375c9371?q=80&w=800'}
+                    alt={p.nombre}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              ),
+            },
+            { key: 'nombre', header: 'Producto', sortable: true, sortValue: (p) => p.nombre },
+            { key: 'price_soles', header: 'Precio Normal', render: (p) => `S/ ${p.price_soles}` },
+            {
+              key: 'oferta_2u',
+              header: 'Oferta 2 unid.',
+              render: (p) =>
+                p.oferta_2u_precio ? (
+                  <span className="font-bold text-emerald-600">S/ {p.oferta_2u_precio}</span>
+                ) : (
+                  <span className="text-gray-400">Sin configurar</span>
+                ),
+            },
+            {
+              key: 'oferta_3u',
+              header: 'Oferta 3 unid.',
+              render: (p) =>
+                p.oferta_3u_precio ? (
+                  <span className="font-bold text-emerald-600">S/ {p.oferta_3u_precio}</span>
+                ) : (
+                  <span className="text-gray-400">Sin configurar</span>
+                ),
+            },
+            {
+              key: 'acciones',
+              header: 'Acciones',
+              render: (p) => (
+                <button className="text-red-600 font-bold hover:underline" onClick={() => abrirOfertaProducto(p)}>
+                  Configurar
+                </button>
+              ),
+            },
+          ]}
+        />
+      )}
 
       {productoEditando && (
         <Modal
@@ -477,7 +680,6 @@ export default function ModificarInventarioPage() {
                     I
                   </button>
                   <select
-                    onMouseDown={(e) => e.preventDefault()}
                     onChange={(e) => {
                       if (e.target.value) formatearDescripcion('fontSize', e.target.value);
                       e.target.value = '';
@@ -526,6 +728,28 @@ export default function ModificarInventarioPage() {
                 color: #9ca3af;
               }
             `}</style>
+
+            {/* OFERTA POR CANTIDAD (inline, opcional al crear/editar) */}
+            <div className="border border-gray-200 rounded-2xl p-3 bg-gray-50/60 space-y-3">
+              <button
+                type="button"
+                onClick={() => setMostrarOferta((v) => !v)}
+                className="flex items-center justify-between w-full text-xs font-bold text-gray-800"
+              >
+                <span>🏷️ ¿Oferta por cantidad? (2 y 3 unidades)</span>
+                <span className="text-red-600">{mostrarOferta ? 'Ocultar ▲' : 'Configurar ▼'}</span>
+              </button>
+
+              {mostrarOferta && (
+                <CamposOfertaCantidad
+                  precioNormal={Number(productoEditando.price_soles) || 0}
+                  valor2u={productoEditando.oferta_2u_precio ?? ''}
+                  valor3u={productoEditando.oferta_3u_precio ?? ''}
+                  onChange2u={(v) => setProductoEditando((prev) => ({ ...prev, oferta_2u_precio: v }))}
+                  onChange3u={(v) => setProductoEditando((prev) => ({ ...prev, oferta_3u_precio: v }))}
+                />
+              )}
+            </div>
 
             {/* IMÁGENES DEL PRODUCTO (unificado: principal + galería, máx. 5) */}
             <div className="border border-dashed border-gray-300 p-3 rounded-2xl bg-gray-50 space-y-2">
@@ -590,6 +814,38 @@ export default function ModificarInventarioPage() {
               </div>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {productoOfertaSeleccionado && (
+        <Modal
+          title={`🏷️ Oferta por Cantidad: ${productoOfertaSeleccionado.nombre}`}
+          onClose={() => setProductoOfertaSeleccionado(null)}
+          widthClassName="max-w-lg"
+        >
+          <div className="space-y-4">
+            <p className="text-xs text-gray-500">
+              Precio normal actual:{' '}
+              <span className="font-bold text-gray-800">
+                S/ {Number(productoOfertaSeleccionado.price_soles || 0).toFixed(2)}
+              </span>
+            </p>
+            <CamposOfertaCantidad
+              precioNormal={Number(productoOfertaSeleccionado.price_soles) || 0}
+              valor2u={productoOfertaSeleccionado.oferta_2u_precio ?? ''}
+              valor3u={productoOfertaSeleccionado.oferta_3u_precio ?? ''}
+              onChange2u={(v) => setProductoOfertaSeleccionado((prev) => ({ ...prev, oferta_2u_precio: v }))}
+              onChange3u={(v) => setProductoOfertaSeleccionado((prev) => ({ ...prev, oferta_3u_precio: v }))}
+            />
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="secondary" onClick={() => setProductoOfertaSeleccionado(null)}>
+                Cancelar
+              </Button>
+              <Button type="button" onClick={guardarOferta} loading={guardandoOferta}>
+                Guardar Oferta
+              </Button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>
