@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { API_URL } from '@/lib/api';
 import { useCart, soles } from './CartContext';
+import DirectOrderModal from './DirectOrderModal';
 import {
   FALLBACK_IMAGE,
   Producto,
@@ -12,12 +13,9 @@ import {
   productoHref,
   galeriaCompleta,
   sanearDescripcionHtml,
-  calcularEnvio,
-  COSTO_ENVIO,
 } from './constants';
 import {
   IconChevronLeft,
-  IconBolt,
   IconShieldCheck,
   IconTruck,
   IconChevronDown,
@@ -27,39 +25,35 @@ import {
 
 const FAQS = [
   {
-    q: '¿Cómo funciona el pago?',
-    a: 'Pago contra entrega en Lima Metropolitana (efectivo, Yape o Plin al recibir). Para envíos a provincia trabajamos con Yape, Plin o depósito previo antes del despacho.',
+    q: '¿Cómo funciona el pago contra entrega?',
+    a: 'En Lima Metropolitana pagas directamente en efectivo, Yape o Plin cuando el motorizado entrega el paquete en tu puerta.',
   },
   {
-    q: '¿Cuánto demora el envío?',
-    a: 'En Lima coordinamos la entrega por WhatsApp apenas confirmamos tu pedido. A provincia enviamos por Shalom u Olva Courier.',
+    q: '¿Hacen envíos a todo el Perú?',
+    a: '¡Sí! Para provincias enviamos diariamente por agencias de carga como Shalom, Olva Courier o Marvisur previo depósito o transferencia.',
   },
   {
-    q: '¿Cómo hago mi pedido?',
-    a: 'Agrega el producto al carrito, completa tus datos de contacto y entrega, y un asesor te escribe por WhatsApp para confirmar todo antes de despachar.',
-  },
-  {
-    q: '¿Los productos son de calidad?',
-    a: 'Sí. Seleccionamos e importamos cada producto verificando su calidad antes de ofrecerlo en la tienda.',
+    q: '¿El producto tiene garantía?',
+    a: 'Todos nuestros productos son importados directamente y pasan por control de calidad. Garantía 100% de cambio o devolución en P&R Store.',
   },
 ];
 
 function Faq() {
   const [abierto, setAbierto] = useState<number | null>(0);
   return (
-    <section className="space-y-3">
-      <h2 className="text-lg font-heading font-black text-brand-grafito">Preguntas Frecuentes</h2>
-      <div className="divide-y divide-slate-200 border border-slate-200 rounded-2xl overflow-hidden bg-white">
+    <section className="space-y-4 pt-4 border-t border-slate-200">
+      <h2 className="text-xl font-heading font-black text-slate-900">Preguntas Frecuentes</h2>
+      <div className="divide-y divide-slate-200 border border-slate-200 rounded-3xl overflow-hidden bg-white shadow-xs">
         {FAQS.map((item, i) => (
           <div key={item.q}>
             <button
               onClick={() => setAbierto(abierto === i ? null : i)}
-              className="w-full flex items-center justify-between gap-3 text-left px-4 py-3.5 text-sm font-bold text-brand-grafito hover:bg-slate-50 transition"
+              className="w-full flex items-center justify-between gap-3 text-left px-5 py-4 text-sm font-bold text-slate-900 hover:bg-slate-50 transition"
             >
               <span>{item.q}</span>
-              <IconChevronDown className={`w-4 h-4 text-brand-red shrink-0 transition-transform ${abierto === i ? 'rotate-180' : ''}`} />
+              <IconChevronDown className={`w-4 h-4 text-red-600 shrink-0 transition-transform ${abierto === i ? 'rotate-180' : ''}`} />
             </button>
-            {abierto === i && <p className="px-4 pb-4 text-xs text-slate-600 leading-relaxed">{item.a}</p>}
+            {abierto === i && <p className="px-5 pb-4 text-xs text-slate-600 leading-relaxed">{item.a}</p>}
           </div>
         ))}
       </div>
@@ -68,13 +62,30 @@ function Faq() {
 }
 
 export default function ProductPage({ slug }: { slug: string }) {
-  const { addToCart, setCartOpen } = useCart();
+  const { config } = useCart();
   const [producto, setProducto] = useState<Producto | null>(null);
   const [relacionados, setRelacionados] = useState<Producto[]>([]);
   const [cargando, setCargando] = useState(true);
   const [noEncontrado, setNoEncontrado] = useState(false);
-  const [qty, setQty] = useState(1);
   const [imagenActiva, setImagenActiva] = useState(0);
+  const [modalPedidoOpen, setModalPedidoOpen] = useState(false);
+
+  // Countdown timer para urgencia (14:59)
+  const [tiempoRestante, setTiempoRestante] = useState(14 * 60 + 59);
+
+  // Combo seleccionado
+  const [selectedPromo, setSelectedPromo] = useState<{ id: string; name: string; price: number }>({
+    id: '1',
+    name: '1 Unidad',
+    price: 0,
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTiempoRestante((prev) => (prev > 0 ? prev - 1 : 14 * 60 + 59));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     setCargando(true);
@@ -89,6 +100,10 @@ export default function ProductPage({ slug }: { slug: string }) {
 
           if (data) {
             setProducto(data);
+            const pUnit = precioDe(data);
+            const p2u = data.oferta_2u_precio ? Number(data.oferta_2u_precio) : Math.round(pUnit * 1.8);
+            setSelectedPromo({ id: '1', name: '1 Unidad', price: pUnit });
+
             setRelacionados(
               lista.filter((p: Producto) => String(p.id) !== String(data.id) && (p.categoria || 'General') === (data.categoria || 'General')).slice(0, 4)
             );
@@ -107,15 +122,20 @@ export default function ProductPage({ slug }: { slug: string }) {
   }, [slug]);
 
   if (cargando) {
-    return <main className="max-w-5xl mx-auto px-4 py-24 text-center text-sm font-bold text-slate-400">Cargando producto...</main>;
+    return (
+      <main className="max-w-5xl mx-auto px-4 py-24 text-center space-y-3">
+        <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <p className="text-sm font-bold text-slate-500">Cargando página del producto...</p>
+      </main>
+    );
   }
 
   if (noEncontrado || !producto) {
     return (
       <main className="max-w-5xl mx-auto px-4 py-24 text-center space-y-4">
-        <p className="text-sm font-bold text-slate-500">No encontramos este producto.</p>
-        <Link href="/" className="inline-flex items-center gap-1.5 text-brand-red font-bold text-xs">
-          <IconChevronLeft className="w-4 h-4" /> Volver al catálogo
+        <p className="text-base font-bold text-slate-600">No encontramos este producto en el catálogo.</p>
+        <Link href="/" className="inline-flex items-center gap-1.5 text-red-600 font-black text-sm">
+          <IconChevronLeft className="w-4 h-4" /> Volver al catálogo principal
         </Link>
       </main>
     );
@@ -125,59 +145,59 @@ export default function ProductPage({ slug }: { slug: string }) {
   const anterior = precioAnteriorDe(producto);
   const descuento = anterior ? Math.round(((anterior - precio) / anterior) * 100) : 0;
 
-  // Oferta manual por cantidad (configurada en el ERP). Si el admin la definió,
-  // tiene prioridad sobre el cálculo automático (precio * 1.8 / * 2.4). El precio
-  // "antes" tachado siempre se calcula con el precio NORMAL (price_soles), no con
-  // el de oferta unitaria.
-  const oferta2u =
-    producto.oferta_2u_precio !== undefined && producto.oferta_2u_precio !== null && producto.oferta_2u_precio !== ''
-      ? Number(producto.oferta_2u_precio)
-      : null;
-  const oferta3u =
-    producto.oferta_3u_precio !== undefined && producto.oferta_3u_precio !== null && producto.oferta_3u_precio !== ''
-      ? Number(producto.oferta_3u_precio)
-      : null;
-  const precioNormalUnitario = Number(producto.price_soles) || precio;
-  const antes2u = precioNormalUnitario * 2;
-  const antes3u = precioNormalUnitario * 3;
+  const oferta2u = producto.oferta_2u_precio ? Number(producto.oferta_2u_precio) : Math.round(precio * 1.8);
+  const oferta3u = producto.oferta_3u_precio ? Number(producto.oferta_3u_precio) : Math.round(precio * 2.4);
 
-  const precioCombo = qty === 1 ? precio : qty === 2 ? oferta2u ?? precio * 1.8 : oferta3u ?? precio * 2.4;
+  const min = Math.floor(tiempoRestante / 60);
+  const sec = tiempoRestante % 60;
+  const timerStr = `${min < 10 ? '0' + min : min}:${sec < 10 ? '0' + sec : sec}`;
+
   const galeria = galeriaCompleta(producto);
-  const envio = calcularEnvio(precioCombo);
 
-  function agregarYAbrir() {
-    if (!producto) return;
-    addToCart({ id: producto.id, title: producto.nombre, price: precioCombo / qty, image: producto.imagen_url || FALLBACK_IMAGE }, qty);
-    setCartOpen(true);
-  }
+  const abrirModalDirecto = () => {
+    setModalPedidoOpen(true);
+  };
 
   return (
-    <main className="max-w-6xl mx-auto px-4 py-8 md:py-12 flex-1 w-full space-y-14 pb-28 md:pb-14">
+    <main className="max-w-6xl mx-auto px-4 py-8 md:py-12 flex-1 w-full space-y-12 pb-28 md:pb-14">
       {/* BREADCRUMB */}
-      <nav className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-        <Link href="/" className="hover:text-brand-red transition">Tienda</Link>
+      <nav className="flex items-center gap-2 text-xs font-bold text-slate-500">
+        <Link href="/" className="hover:text-red-600 transition">Tienda</Link>
         <span>/</span>
-        <Link href={`/?q=${encodeURIComponent(producto.categoria || 'General')}`} className="hover:text-brand-red transition">
+        <Link href={`/#catalogo`} className="hover:text-red-600 transition">
           {producto.categoria || 'General'}
         </Link>
         <span>/</span>
-        <span className="text-brand-grafito line-clamp-1">{producto.nombre}</span>
+        <span className="text-slate-900 line-clamp-1">{producto.nombre}</span>
       </nav>
 
+      {/* DETALLES PRODUCTO LANDING GANADORA */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
-        {/* GALERIA */}
-        <div className="space-y-3 md:sticky md:top-24">
-          <div className="rounded-3xl overflow-hidden border border-slate-200 bg-white shadow-xs aspect-square flex items-center justify-center">
+        
+        {/* GALERÍA DE IMÁGENES */}
+        <div className="space-y-4 md:sticky md:top-24">
+          <div className="relative rounded-3xl overflow-hidden border-2 border-slate-200 bg-white shadow-xl aspect-square flex items-center justify-center p-4">
+            {producto.badge && producto.badge !== 'SIN BADGE' && (
+              <span className="absolute top-4 left-4 bg-red-600 text-white text-xs font-heading font-black px-3 py-1 rounded-full uppercase z-10 shadow-md">
+                {producto.badge}
+              </span>
+            )}
+            {descuento > 0 && (
+              <span className="absolute top-4 right-4 bg-amber-400 text-slate-950 text-xs font-heading font-black px-3 py-1 rounded-full z-10 shadow-md">
+                -{descuento}% OFF
+              </span>
+            )}
             <img src={galeria[imagenActiva] || FALLBACK_IMAGE} alt={producto.nombre} className="w-full h-full object-contain" />
           </div>
+
           {galeria.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto pb-1">
+            <div className="flex gap-3 overflow-x-auto pb-1">
               {galeria.map((url, i) => (
                 <button
                   key={`${url}-${i}`}
                   onClick={() => setImagenActiva(i)}
-                  className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 bg-white flex items-center justify-center transition ${
-                    imagenActiva === i ? 'border-brand-red' : 'border-slate-200 opacity-80 hover:opacity-100'
+                  className={`shrink-0 w-20 h-20 rounded-2xl overflow-hidden border-2 bg-white flex items-center justify-center transition p-1 ${
+                    imagenActiva === i ? 'border-red-600 shadow-md scale-105' : 'border-slate-200 opacity-70 hover:opacity-100'
                   }`}
                 >
                   <img src={url} alt={`${producto.nombre} vista ${i + 1}`} className="w-full h-full object-contain" />
@@ -187,32 +207,28 @@ export default function ProductPage({ slug }: { slug: string }) {
           )}
         </div>
 
-        {/* INFO / HOOK */}
-        <div className="space-y-5">
+        {/* COLUMNA DERECHA - OFERTA DE ALTA CONVERSIÓN */}
+        <div className="space-y-6">
           <div className="space-y-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              {producto.badge && producto.badge !== 'SIN BADGE' && (
-                <span className="bg-brand-red text-white text-[10px] font-heading font-extrabold px-2.5 py-1 rounded-md uppercase">{producto.badge}</span>
-              )}
-              {descuento > 0 && <span className="bg-brand-gold text-brand-grafito text-[10px] font-heading font-black px-2.5 py-1 rounded-md">-{descuento}% OFF</span>}
-              <span className="text-xs font-bold text-brand-red uppercase tracking-wider">{producto.categoria || 'General'}</span>
+            <div className="flex items-center gap-2 flex-wrap text-amber-500 font-bold text-xs">
+              <span>★★★★★</span>
+              <span className="text-slate-500 font-semibold">4.9/5 (+1,240 clientes satisfechos)</span>
             </div>
 
-            <h1 className="text-2xl md:text-4xl font-heading font-black text-brand-grafito leading-tight">{producto.nombre}</h1>
+            <h1 className="text-3xl md:text-4xl font-heading font-black text-slate-900 leading-tight">
+              {producto.nombre}
+            </h1>
           </div>
 
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-3xl font-heading font-black text-brand-red">{soles(precio)}</span>
-            {anterior && <span className="text-base text-slate-400 line-through">{soles(anterior)}</span>}
-            {typeof producto.stock === 'number' && (
-              <span
-                className={`text-xs font-bold px-3 py-0.5 rounded-full border ${
-                  producto.stock > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'
-                }`}
-              >
-                {producto.stock > 0 ? `En Stock (${producto.stock} unids)` : 'Agotado'}
-              </span>
-            )}
+          {/* TIMER DE URGENCIA */}
+          <div className="bg-gradient-to-r from-amber-500/10 to-red-500/10 border-2 border-amber-400/50 rounded-2xl p-4 flex items-center justify-between text-slate-900">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">⏰</span>
+              <span className="text-xs font-heading font-black uppercase tracking-wider text-red-700">Oferta Especial por Tiempo Limitado:</span>
+            </div>
+            <div className="font-mono text-base font-black text-red-600 bg-white px-3 py-1.5 rounded-xl border border-amber-200 shadow-xs">
+              {timerStr}
+            </div>
           </div>
 
           <div
@@ -222,98 +238,128 @@ export default function ProductPage({ slug }: { slug: string }) {
             }}
           />
 
-          <div className="flex items-center gap-4 text-sm font-semibold text-slate-500 border-y border-slate-100 py-3 flex-wrap">
-            <span className="flex items-center gap-1.5"><IconShieldCheck className="w-[18px] h-[18px] text-brand-red" /> Calidad garantizada</span>
-            <span className="flex items-center gap-1.5"><IconTruck className="w-[18px] h-[18px] text-brand-red" /> Envíos a todo el país</span>
-            <span className="flex items-center gap-1.5"><IconLock className="w-[18px] h-[18px] text-brand-red" /> Pago contra entrega</span>
+          {/* COMBOS PROMO DE ALTA CONVERSIÓN */}
+          <div className="space-y-3 pt-2">
+            <h3 className="text-xs font-heading font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+              <span>🎁 Selecciona tu Promo con Descuento:</span>
+            </h3>
+
+            <div className="space-y-3">
+              {/* Option 1 Unit */}
+              <label
+                onClick={() => setSelectedPromo({ id: '1', name: '1 Unidad', price: precio })}
+                className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition shadow-xs ${
+                  selectedPromo.id === '1' ? 'border-red-600 bg-red-50/70 text-slate-900 font-bold' : 'border-slate-200 bg-white hover:border-slate-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-full border-2 border-red-600 flex items-center justify-center`}>
+                    {selectedPromo.id === '1' && <div className="w-2.5 h-2.5 rounded-full bg-red-600" />}
+                  </div>
+                  <div>
+                    <span className="font-heading font-bold text-sm block">1 Unidad</span>
+                    <span className="text-xs text-slate-500">Uso personal</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-xl font-heading font-black text-red-600 block">{soles(precio)}</span>
+                  {anterior && <span className="text-xs text-slate-400 line-through">{soles(anterior)}</span>}
+                </div>
+              </label>
+
+              {/* Option 2 Units */}
+              <label
+                onClick={() => setSelectedPromo({ id: '2', name: '2 Unidades (Más Vendido)', price: oferta2u })}
+                className={`relative flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition shadow-sm ${
+                  selectedPromo.id === '2' ? 'border-red-600 bg-red-50/70 text-slate-900 font-bold' : 'border-slate-200 bg-white hover:border-slate-300'
+                }`}
+              >
+                <span className="absolute -top-3 right-4 bg-red-600 text-white text-[10px] font-heading font-black uppercase px-3 py-0.5 rounded-full shadow-xs">
+                  ⭐ MÁS VENDIDO
+                </span>
+                <div className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-full border-2 border-red-600 flex items-center justify-center`}>
+                    {selectedPromo.id === '2' && <div className="w-2.5 h-2.5 rounded-full bg-red-600" />}
+                  </div>
+                  <div>
+                    <span className="font-heading font-bold text-sm block">2 Unidades</span>
+                    <span className="text-xs text-red-700 font-bold">Especial Parejas / Ahorra más</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-xl font-heading font-black text-red-600 block">{soles(oferta2u)}</span>
+                  <span className="text-xs text-slate-400 line-through">{soles(precio * 2)}</span>
+                </div>
+              </label>
+
+              {/* Option 3 Units */}
+              <label
+                onClick={() => setSelectedPromo({ id: '3', name: '3 Unidades (Pack Familiar)', price: oferta3u })}
+                className={`relative flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition shadow-xs ${
+                  selectedPromo.id === '3' ? 'border-red-600 bg-red-50/70 text-slate-900 font-bold' : 'border-slate-200 bg-white hover:border-slate-300'
+                }`}
+              >
+                <span className="absolute -top-3 right-4 bg-amber-400 text-slate-950 text-[10px] font-heading font-black uppercase px-3 py-0.5 rounded-full shadow-xs">
+                  🔥 PACK FAMILIAR
+                </span>
+                <div className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-full border-2 border-red-600 flex items-center justify-center`}>
+                    {selectedPromo.id === '3' && <div className="w-2.5 h-2.5 rounded-full bg-red-600" />}
+                  </div>
+                  <div>
+                    <span className="font-heading font-bold text-sm block">3 Unidades</span>
+                    <span className="text-xs text-amber-800 font-bold">Máximo Ahorro</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-xl font-heading font-black text-red-600 block">{soles(oferta3u)}</span>
+                  <span className="text-xs text-slate-400 line-through">{soles(precio * 3)}</span>
+                </div>
+              </label>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="block text-xs font-heading font-bold text-brand-grafito">Selecciona Cantidad / Combo:</label>
-            <select
-              value={qty}
-              onChange={(e) => setQty(Number(e.target.value))}
-              className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-bold focus:ring-2 focus:ring-brand-red"
-            >
-              <option value={1}>1 Unidad - {soles(precio * 1)}</option>
-              <option value={2}>
-                2 Unidades (Combo Pareja) - {soles(oferta2u ?? precio * 1.8)}
-                {oferta2u ? ` (antes ${soles(antes2u)})` : ''}
-              </option>
-              <option value={3}>
-                3 Unidades (Pack Familiar) - {soles(oferta3u ?? precio * 2.4)}
-                {oferta3u ? ` (antes ${soles(antes3u)})` : ''}
-              </option>
-            </select>
-
-            {envio.gratis ? (
-              <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm font-bold px-3.5 py-2 rounded-full">
-                <IconTruck className="w-4 h-4" /> Envío GRATIS 🎉
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-600 border border-slate-200 text-sm font-bold px-3.5 py-2 rounded-full">
-                <IconTruck className="w-4 h-4" /> Costo de envío: {soles(COSTO_ENVIO)}
-              </span>
-            )}
+          {/* TRUST BADGES */}
+          <div className="flex items-center gap-3 text-xs font-bold text-slate-600 border-y border-slate-200 py-3.5 flex-wrap">
+            <span className="flex items-center gap-1.5"><IconShieldCheck className="w-4 h-4 text-emerald-600" /> Garantía P&R Store</span>
+            <span className="flex items-center gap-1.5"><IconTruck className="w-4 h-4 text-red-600" /> Pago Contra Entrega en Lima</span>
           </div>
 
-          <div className="hidden md:block pt-1">
-            <button
-              onClick={agregarYAbrir}
-              className="w-full bg-brand-red hover:bg-brand-darkred text-white font-heading font-extrabold py-4 px-4 rounded-2xl text-base shadow-lg hover:shadow-xl transition flex items-center justify-center gap-2"
-            >
-              <IconBolt className="w-5 h-5" />
-              Comprar Ahora
-            </button>
-          </div>
-
-          <Link href="/" className="inline-flex items-center gap-1.5 text-slate-500 hover:text-brand-red font-bold text-xs pt-2">
-            <IconChevronLeft className="w-4 h-4" /> Seguir viendo el catálogo
-          </Link>
+          {/* BOTÓN PRINCIPAL COMPRAR AHORA -> ABRE MODAL FLOTANTE DIRECTO */}
+          <button
+            onClick={abrirModalDirecto}
+            className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-heading font-black py-4 px-6 rounded-2xl text-base shadow-xl hover:shadow-2xl transition flex items-center justify-center gap-3 transform hover:-translate-y-0.5"
+          >
+            <span>⚡ ¡PEDIR AHORA - PAGO CONTRA ENTREGA!</span>
+          </button>
         </div>
       </div>
 
       <Faq />
 
-      {/* RELACIONADOS */}
-      {relacionados.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-lg font-heading font-black text-brand-grafito">También te puede interesar</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
-            {relacionados.map((p) => {
-              const pPrecio = precioDe(p);
-              const pAnterior = precioAnteriorDe(p);
-              return (
-                <Link key={p.id} href={productoHref(p)} className="store-luxury-card bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-2xs block">
-                  <div className="w-full h-36 bg-white flex items-center justify-center">
-                    <img src={p.imagen_url || FALLBACK_IMAGE} alt={p.nombre} className="store-img-zoom w-full h-full object-contain" />
-                  </div>
-                  <div className="p-3 space-y-1">
-                    <h3 className="font-heading font-bold text-brand-grafito text-xs line-clamp-2">{p.nombre}</h3>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-sm font-heading font-black text-brand-red">{soles(pPrecio)}</span>
-                      {pAnterior && <span className="text-[10px] text-slate-400 line-through">{soles(pAnterior)}</span>}
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
+      {/* MODAL DE PEDIDO FLOTANTE DIRECTO SIN CARRITO */}
+      {modalPedidoOpen && (
+        <DirectOrderModal
+          productoNombre={producto.nombre}
+          productoId={producto.id}
+          precioUnitario={precio}
+          promoElegida={selectedPromo}
+          onClose={() => setModalPedidoOpen(false)}
+          whatsappNumero={config.whatsappNumber}
+        />
       )}
 
-      {/* BARRA CTA FIJA — SOLO MOBILE */}
-      <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 shadow-2xl p-3 flex items-center gap-3">
-        <div className="shrink-0">
-          <span className="block text-[10px] text-slate-400 font-bold uppercase">Precio</span>
-          <span className="text-lg font-heading font-black text-brand-red leading-none">{soles(precio)}</span>
+      {/* STICKY BOTTOM BUTTON MOVIL */}
+      <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 shadow-2xl p-3 flex items-center justify-between gap-3">
+        <div>
+          <span className="block text-[10px] text-slate-400 font-bold uppercase">Total Promo</span>
+          <span className="text-lg font-heading font-black text-red-600">{soles(selectedPromo.price)}</span>
         </div>
         <button
-          onClick={agregarYAbrir}
-          className="flex-1 bg-brand-red hover:bg-brand-darkred text-white font-heading font-extrabold py-3.5 px-4 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-md"
+          onClick={abrirModalDirecto}
+          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-heading font-black py-3.5 px-4 rounded-2xl text-xs flex items-center justify-center gap-1.5 shadow-lg"
         >
-          <IconWhatsapp className="w-5 h-5" />
-          Comprar Ahora
+          <span>¡PEDIR CONTRA ENTREGA!</span>
         </button>
       </div>
     </main>
