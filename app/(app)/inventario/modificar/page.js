@@ -19,13 +19,10 @@ const PRODUCTO_VACIO = {
   badge: 'SIN BADGE',
   imagen_url: '',
   descripcion: '',
-  hook_titulo: '',
-  beneficios: '',
   galeria_urls: '',
-  gif_url: '',
 };
 
-const MAX_GALERIA = 5;
+const MAX_IMAGENES = 5;
 
 function comprimirImagen(file, { maxDim = 1200, calidad = 0.88 } = {}) {
   return new Promise((resolve, reject) => {
@@ -61,6 +58,25 @@ function comprimirImagen(file, { maxDim = 1200, calidad = 0.88 } = {}) {
   });
 }
 
+// Lee el archivo tal cual (sin recomprimir) — usado para GIFs, para no perder la animación
+function leerComoDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => resolve(event.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Procesa un archivo de imagen: los GIF se conservan intactos (para mantener la animación),
+// el resto se comprime vía canvas para no saturar la base de datos.
+function procesarImagen(file) {
+  if (file.type === 'image/gif') {
+    return leerComoDataUrl(file);
+  }
+  return comprimirImagen(file);
+}
+
 function lineasA(texto) {
   return (texto || '')
     .split('\n')
@@ -76,8 +92,7 @@ export default function ModificarInventarioPage() {
   const [productoEditando, setProductoEditando] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [eliminando, setEliminando] = useState(false);
-  const [imagenPreview, setImagenPreview] = useState('');
-  const [subiendoGaleria, setSubiendoGaleria] = useState(false);
+  const [subiendoImagenes, setSubiendoImagenes] = useState(false);
 
   const obtenerProductos = async () => {
     setCargando(true);
@@ -100,12 +115,10 @@ export default function ModificarInventarioPage() {
 
   const abrirNuevoProducto = () => {
     setProductoEditando({ ...PRODUCTO_VACIO });
-    setImagenPreview('');
   };
 
   const abrirEdicion = (p) => {
     setProductoEditando(p);
-    setImagenPreview(p.imagen_url || '');
   };
 
   const handleInputChange = (e) => {
@@ -116,57 +129,56 @@ export default function ModificarInventarioPage() {
     }));
   };
 
-  // Compresión automática de la imagen principal en el cliente
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    try {
-      const compressed = await comprimirImagen(file);
-      setImagenPreview(compressed);
-      setProductoEditando((prev) => ({ ...prev, imagen_url: compressed }));
-    } catch (error) {
-      console.error('Error al comprimir imagen:', error);
-      toast.error('No se pudo procesar la imagen.');
-    }
+  // Todas las imágenes del producto en un solo arreglo: la primera es la "principal"
+  // (imagen_url) y el resto son la galería (galeria_urls). Esto evita tener dos
+  // secciones separadas que confundían al usuario.
+  const imagenesActuales = (p) => [p?.imagen_url, ...lineasA(p?.galeria_urls)].filter(Boolean);
+
+  const guardarImagenes = (lista) => {
+    const [principal, ...resto] = lista;
+    setProductoEditando((prev) => ({
+      ...prev,
+      imagen_url: principal || '',
+      galeria_urls: resto.join('\n'),
+    }));
   };
 
-  // Subida de imágenes adicionales para la galería (máx. 5)
-  const handleGaleriaFileUpload = async (e) => {
+  // Subida unificada de imágenes del producto (máx. 5, la 1ra = imagen principal)
+  const handleImagenesUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    const actuales = lineasA(productoEditando.galeria_urls);
-    const espacioDisponible = MAX_GALERIA - actuales.length;
+    const actuales = imagenesActuales(productoEditando);
+    const espacioDisponible = MAX_IMAGENES - actuales.length;
 
     if (espacioDisponible <= 0) {
-      toast.error(`Ya tienes el máximo de ${MAX_GALERIA} imágenes en la galería.`);
+      toast.error(`Ya tienes el máximo de ${MAX_IMAGENES} imágenes.`);
       e.target.value = '';
       return;
     }
 
-    setSubiendoGaleria(true);
+    setSubiendoImagenes(true);
     try {
       const aProcesar = files.slice(0, espacioDisponible);
-      const nuevas = await Promise.all(aProcesar.map((f) => comprimirImagen(f)));
-      const combinadas = [...actuales, ...nuevas];
-      setProductoEditando((prev) => ({ ...prev, galeria_urls: combinadas.join('\n') }));
+      const nuevas = await Promise.all(aProcesar.map((f) => procesarImagen(f)));
+      guardarImagenes([...actuales, ...nuevas]);
 
       if (files.length > espacioDisponible) {
-        toast.error(`Solo se agregaron ${espacioDisponible} imagen(es); el máximo es ${MAX_GALERIA}.`);
+        toast.error(`Solo se agregaron ${espacioDisponible} imagen(es); el máximo es ${MAX_IMAGENES}.`);
       }
     } catch (error) {
-      console.error('Error al procesar imágenes de galería:', error);
+      console.error('Error al procesar imágenes:', error);
       toast.error('No se pudieron procesar algunas imágenes.');
     } finally {
-      setSubiendoGaleria(false);
+      setSubiendoImagenes(false);
       e.target.value = '';
     }
   };
 
-  const quitarGaleriaImg = (idx) => {
-    const actuales = lineasA(productoEditando.galeria_urls);
+  const quitarImagen = (idx) => {
+    const actuales = imagenesActuales(productoEditando);
     actuales.splice(idx, 1);
-    setProductoEditando((prev) => ({ ...prev, galeria_urls: actuales.join('\n') }));
+    guardarImagenes(actuales);
   };
 
   const guardarCambios = async (e) => {
@@ -193,7 +205,14 @@ export default function ModificarInventarioPage() {
         setProductoEditando(null);
         obtenerProductos();
       } else {
-        toast.error(esNuevo ? 'Error al agregar el producto.' : 'Error al actualizar el producto.');
+        let mensaje = esNuevo ? 'Error al agregar el producto.' : 'Error al actualizar el producto.';
+        try {
+          const cuerpo = await res.json();
+          if (cuerpo?.error) mensaje = cuerpo.error;
+        } catch {
+          // respuesta sin JSON, se usa el mensaje genérico
+        }
+        toast.error(mensaje);
       }
     } catch (error) {
       console.error('Error al guardar cambios:', error);
@@ -233,7 +252,7 @@ export default function ModificarInventarioPage() {
     }
   };
 
-  const galeriaImgs = productoEditando ? lineasA(productoEditando.galeria_urls) : [];
+  const imagenesDelProducto = productoEditando ? imagenesActuales(productoEditando) : [];
 
   return (
     <div className="space-y-6">
@@ -376,132 +395,61 @@ export default function ModificarInventarioPage() {
               </div>
             </div>
 
-            <FormField
-              label="Descripción"
-              name="descripcion"
-              value={productoEditando.descripcion ?? ''}
-              onChange={handleInputChange}
-            />
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Descripción</label>
+              <textarea
+                name="descripcion"
+                rows={5}
+                placeholder={'Cuenta qué hace especial a este producto...\nPuedes usar varias líneas y emojis 😍✨'}
+                value={productoEditando.descripcion ?? ''}
+                onChange={handleInputChange}
+                className="w-full bg-white border border-gray-300 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none"
+              />
+            </div>
 
-            {/* IMAGEN PRINCIPAL SUBIDA VISUAL CON COMPRESION */}
+            {/* IMÁGENES DEL PRODUCTO (unificado: principal + galería, máx. 5) */}
             <div className="border border-dashed border-gray-300 p-3 rounded-2xl bg-gray-50 space-y-2">
               <label className="block text-xs font-bold text-gray-800 uppercase">
-                Imagen Principal del Producto (Subir o URL)
+                Imágenes del Producto ({imagenesDelProducto.length}/{MAX_IMAGENES})
               </label>
+              <p className="text-[11px] text-gray-500">
+                La primera imagen es la principal. Puedes subir hasta {MAX_IMAGENES} fotos (o GIFs) para mostrar más de un ángulo en la página del producto.
+              </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+              {imagenesDelProducto.length > 0 && (
+                <div className="grid grid-cols-5 gap-2">
+                  {imagenesDelProducto.map((url, idx) => (
+                    <div key={idx} className="relative w-full aspect-square bg-white border border-gray-300 rounded-xl overflow-hidden flex items-center justify-center">
+                      <img src={url} alt={`Imagen ${idx + 1}`} className="w-full h-full object-contain" />
+                      {idx === 0 && (
+                        <span className="absolute bottom-0.5 left-0.5 bg-gray-900/80 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                          Principal
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => quitarImagen(idx)}
+                        className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-600 text-white rounded-full text-[10px] font-bold flex items-center justify-center shadow"
+                        title="Quitar imagen"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {imagenesDelProducto.length < MAX_IMAGENES && (
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={handleFileUpload}
+                  multiple
+                  onChange={handleImagenesUpload}
+                  disabled={subiendoImagenes}
                   className="text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-red-600 file:text-white cursor-pointer"
                 />
-                <input
-                  type="url"
-                  name="imagen_url"
-                  placeholder="O pegar URL de imagen..."
-                  value={productoEditando.imagen_url ?? ''}
-                  onChange={(e) => {
-                    handleInputChange(e);
-                    setImagenPreview(e.target.value);
-                  }}
-                  className="w-full bg-white border border-gray-300 rounded-xl p-2 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
-                />
-              </div>
-
-              {imagenPreview && (
-                <div className="flex items-center gap-3 pt-2">
-                  <div className="w-16 h-16 bg-white border border-gray-300 rounded-xl flex items-center justify-center overflow-hidden">
-                    <img src={imagenPreview} alt="Preview" className="w-full h-full object-contain" />
-                  </div>
-                  <span className="text-xs font-bold text-green-600">Vista previa lista para la tienda web</span>
-                </div>
               )}
-            </div>
-
-            {/* MARKETING / LANDING PAGE DEL PRODUCTO */}
-            <div className="border border-dashed border-red-200 p-3 rounded-2xl bg-red-50/40 space-y-3">
-              <label className="block text-xs font-black text-gray-800 uppercase">
-                🎯 Landing Page del Producto (para Meta Ads)
-              </label>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Título Gancho (Hook) — la frase grande que verá el cliente
-                </label>
-                <input
-                  type="text"
-                  name="hook_titulo"
-                  placeholder='Ej: "Deja de botar yogurt en tu mochila"'
-                  value={productoEditando.hook_titulo ?? ''}
-                  onChange={handleInputChange}
-                  className="w-full bg-white border border-gray-300 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Beneficios (uno por línea, se muestran con ✅)
-                </label>
-                <textarea
-                  name="beneficios"
-                  rows={4}
-                  placeholder={'Mantiene todo fresco y separado\nCuchara incluida, no se pierde\nAntiderrame, ideal para la mochila'}
-                  value={productoEditando.beneficios ?? ''}
-                  onChange={handleInputChange}
-                  className="w-full bg-white border border-gray-300 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-gray-700">
-                  Imágenes Adicionales de Galería ({galeriaImgs.length}/{MAX_GALERIA})
-                </label>
-
-                {galeriaImgs.length > 0 && (
-                  <div className="grid grid-cols-5 gap-2">
-                    {galeriaImgs.map((url, idx) => (
-                      <div key={idx} className="relative w-full aspect-square bg-white border border-gray-300 rounded-xl overflow-hidden flex items-center justify-center">
-                        <img src={url} alt={`Galería ${idx + 1}`} className="w-full h-full object-contain" />
-                        <button
-                          type="button"
-                          onClick={() => quitarGaleriaImg(idx)}
-                          className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-600 text-white rounded-full text-[10px] font-bold flex items-center justify-center shadow"
-                          title="Quitar imagen"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {galeriaImgs.length < MAX_GALERIA && (
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleGaleriaFileUpload}
-                    disabled={subiendoGaleria}
-                    className="text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-gray-800 file:text-white cursor-pointer"
-                  />
-                )}
-                {subiendoGaleria && <p className="text-[11px] text-gray-500">Procesando imágenes...</p>}
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  GIF de Demostración (URL, opcional — se anima solo en la página)
-                </label>
-                <input
-                  type="url"
-                  name="gif_url"
-                  placeholder="https://.../demo.gif"
-                  value={productoEditando.gif_url ?? ''}
-                  onChange={handleInputChange}
-                  className="w-full bg-white border border-gray-300 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
-                />
-              </div>
+              {subiendoImagenes && <p className="text-[11px] text-gray-500">Procesando imágenes...</p>}
             </div>
 
             <div className="flex justify-between items-center pt-2">

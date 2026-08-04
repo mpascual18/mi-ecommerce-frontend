@@ -4,14 +4,13 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { API_URL } from '@/lib/api';
 import { useCart, soles } from './CartContext';
-import { FALLBACK_IMAGE, Producto, precioDe, precioAnteriorDe, productoHref, lineasA, galeriaCompleta } from './constants';
+import { FALLBACK_IMAGE, Producto, precioDe, precioAnteriorDe, productoHref, galeriaCompleta } from './constants';
 import {
   IconChevronLeft,
   IconBag,
   IconBolt,
   IconShieldCheck,
   IconTruck,
-  IconCheck,
   IconChevronDown,
   IconWhatsapp,
   IconLock,
@@ -117,9 +116,7 @@ export default function ProductPage({ slug }: { slug: string }) {
   const anterior = precioAnteriorDe(producto);
   const descuento = anterior ? Math.round(((anterior - precio) / anterior) * 100) : 0;
   const precioCombo = qty === 1 ? precio : qty === 2 ? precio * 1.8 : precio * 2.4;
-  const beneficios = lineasA(producto.beneficios);
   const galeria = galeriaCompleta(producto);
-  const titulo = producto.hook_titulo?.trim() || producto.nombre;
 
   function agregarYAbrir() {
     if (!producto) return;
@@ -174,8 +171,7 @@ export default function ProductPage({ slug }: { slug: string }) {
               <span className="text-xs font-bold text-brand-red uppercase tracking-wider">{producto.categoria || 'General'}</span>
             </div>
 
-            <h1 className="text-2xl md:text-4xl font-heading font-black text-brand-grafito leading-tight">{titulo}</h1>
-            {producto.hook_titulo?.trim() && <p className="text-sm text-slate-500 font-semibold">{producto.nombre}</p>}
+            <h1 className="text-2xl md:text-4xl font-heading font-black text-brand-grafito leading-tight">{producto.nombre}</h1>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
@@ -192,21 +188,7 @@ export default function ProductPage({ slug }: { slug: string }) {
             )}
           </div>
 
-          {/* BENEFICIOS */}
-          {beneficios.length > 0 && (
-            <ul className="space-y-2">
-              {beneficios.map((b, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-sm text-brand-grafito font-medium">
-                  <span className="mt-0.5 w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                    <IconCheck className="w-3 h-3" />
-                  </span>
-                  {b}
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <p className="text-sm text-slate-600 leading-relaxed">{producto.descripcion || 'Producto importado de alta calidad.'}</p>
+          <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{producto.descripcion || 'Producto importado de alta calidad.'}</p>
 
           <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 border-y border-slate-100 py-3 flex-wrap">
             <span className="flex items-center gap-1.5"><IconShieldCheck className="w-4 h-4 text-brand-red" /> Calidad garantizada</span>
