@@ -9,6 +9,7 @@ export const metadata = {
   metadataBase: new URL(SITE_URL),
   title: TITLE,
   description: DESCRIPTION,
+  icons: { icon: '/logo-icono.png' },
   openGraph: {
     title: TITLE,
     description: DESCRIPTION,

@@ -56,18 +56,12 @@ function Header() {
     <header className="store-glass-header border-b border-slate-200/80 sticky top-0 z-30 shadow-xs backdrop-blur-md bg-white/90">
       <div className="max-w-7xl mx-auto px-4 py-3.5 flex items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-3 group shrink-0">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-red-700 to-red-600 flex items-center justify-center text-white shadow-md p-2 shrink-0 overflow-hidden group-hover:scale-105 transition-transform duration-300">
-            {config.logoUrl ? (
-              <img src={config.logoUrl} alt={config.storeName} className="w-full h-full object-cover rounded-xl" />
-            ) : (
-              <span className="font-heading font-black text-xl tracking-tighter">P&R</span>
-            )}
-          </div>
-          <div className="hidden sm:block">
-            <span className="text-xl md:text-2xl font-heading font-black text-red-600 tracking-tight block leading-none">
-              {config.storeName.replace('Store', '').trim()} <span className="text-slate-900">Store</span>
-            </span>
-            <span className="text-[10px] text-red-600 uppercase tracking-widest block font-bold mt-1">{config.storeSub}</span>
+          <div className="h-12 flex items-center justify-center shrink-0 overflow-hidden group-hover:scale-105 transition-transform duration-300">
+            <img
+              src={config.logoUrl || '/logo-completo.png'}
+              alt={config.storeName}
+              className="h-10 md:h-12 w-auto object-contain"
+            />
           </div>
         </Link>
 
