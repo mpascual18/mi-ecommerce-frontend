@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { API_URL } from '@/lib/api';
+import EtiquetaTermicaModal from '@/components/logistica/EtiquetaTermicaModal';
 
 type Pedido = {
   id: number;
@@ -35,8 +36,9 @@ export default function PedidosPage() {
   const [estadoFiltro, setEstadoFiltro] = useState<string>('todos');
   const [regionFiltro, setRegionFiltro] = useState<string>('todos');
 
-  // Modal tracking state
+  // Modales
   const [pedidoModal, setPedidoModal] = useState<Pedido | null>(null);
+  const [etiquetaModal, setEtiquetaModal] = useState<Pedido | null>(null);
   const [trackingGuia, setTrackingGuia] = useState('');
   const [notas, setNotas] = useState('');
 
@@ -83,6 +85,20 @@ export default function PedidosPage() {
     } catch (err) {
       console.error('Error al actualizar estado:', err);
     }
+  };
+
+  const enviarNotificacionWhatsApp = (p: Pedido) => {
+    let msg = `Hola *${p.cliente_nombre}*, te saludamos de *P&R Store* 🛍️\n`;
+    if (p.estado === 'en_camino') {
+      msg += `Tu pedido *#${p.id}* por S/. ${Number(p.total).toFixed(2)} ya está en camino 🚚.\n`;
+      if (p.tracking_guia) msg += `N° Guía / Seguimiento: *${p.tracking_guia}*\n`;
+      msg += `Por favor estar atento al teléfono para la entrega. ¡Gracias por tu compra!`;
+    } else {
+      msg += `Respecto a tu pedido *#${p.id}* en estado *${p.estado.toUpperCase()}*.\nTotal a pagar: S/. ${Number(p.total).toFixed(2)}.`;
+    }
+    const cleanPhone = p.celular.replace(/\D/g, '');
+    const fullPhone = cleanPhone.startsWith('51') ? cleanPhone : `51${cleanPhone}`;
+    window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
   // Filter pedidos
@@ -174,7 +190,12 @@ export default function PedidosPage() {
 
                   <div>
                     <h3 className="font-bold text-gray-900 text-sm">{p.cliente_nombre}</h3>
-                    <p className="text-xs text-blue-600 font-bold">📞 {p.celular}</p>
+                    <p className="text-xs text-blue-600 font-bold flex items-center justify-between">
+                      <span>📞 {p.celular}</span>
+                      <button onClick={() => enviarNotificacionWhatsApp(p)} className="bg-green-100 hover:bg-green-200 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded-md transition">
+                        💬 Notificar
+                      </button>
+                    </p>
                     <p className="text-xs text-gray-500 mt-1 line-clamp-2">📍 {p.direccion} ({p.distrito})</p>
                   </div>
 
@@ -197,8 +218,15 @@ export default function PedidosPage() {
                     <span className="text-lg font-black text-red-600">S/ {Number(p.total).toFixed(2)}</span>
                   </div>
 
-                  {/* ACCIONES RAPIDAS DE ESTADO */}
+                  {/* ACCIONES RAPIDAS DE ESTADO Y LOGISTICA */}
                   <div className="grid grid-cols-2 gap-2 pt-1 text-[11px]">
+                    <button
+                      onClick={() => setEtiquetaModal(p)}
+                      className="bg-slate-900 hover:bg-black text-white font-bold py-2 rounded-xl transition text-center flex items-center justify-center gap-1"
+                    >
+                      <span>🖨️ Rotulado 10x15</span>
+                    </button>
+
                     <button
                       onClick={() => {
                         setPedidoModal(p);
@@ -211,23 +239,23 @@ export default function PedidosPage() {
                     </button>
 
                     {p.estado === 'ingresado' && (
-                      <button onClick={() => cambiarEstadoPedido(p.id, 'contactado')} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl transition">
+                      <button onClick={() => cambiarEstadoPedido(p.id, 'contactado')} className="col-span-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl transition">
                         📞 Contactado
                       </button>
                     )}
                     {p.estado === 'contactado' && (
-                      <button onClick={() => cambiarEstadoPedido(p.id, 'confirmado')} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-xl transition">
-                        🟢 Confirmar
+                      <button onClick={() => cambiarEstadoPedido(p.id, 'confirmado')} className="col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-xl transition">
+                        🟢 Confirmar Pedido
                       </button>
                     )}
                     {p.estado === 'confirmado' && (
-                      <button onClick={() => cambiarEstadoPedido(p.id, 'en_camino')} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 rounded-xl transition">
-                        🚚 En Camino
+                      <button onClick={() => cambiarEstadoPedido(p.id, 'en_camino')} className="col-span-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 rounded-xl transition">
+                        🚚 Marcar En Camino / Despachado
                       </button>
                     )}
                     {p.estado === 'en_camino' && (
-                      <button onClick={() => cambiarEstadoPedido(p.id, 'entregado')} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-xl transition">
-                        ✅ Entregado
+                      <button onClick={() => cambiarEstadoPedido(p.id, 'entregado')} className="col-span-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-xl transition">
+                        ✅ Entregado & Cobrado
                       </button>
                     )}
                     {p.estado !== 'anulado' && p.estado !== 'entregado' && (
@@ -242,6 +270,14 @@ export default function PedidosPage() {
           })
         )}
       </div>
+
+      {/* MODAL PARA ETIQUETA TERMICA */}
+      {etiquetaModal && (
+        <EtiquetaTermicaModal
+          pedido={etiquetaModal}
+          onClose={() => setEtiquetaModal(null)}
+        />
+      )}
 
       {/* MODAL PARA NOTAS Y GUIA */}
       {pedidoModal && (
@@ -306,3 +342,4 @@ export default function PedidosPage() {
     </div>
   );
 }
+
