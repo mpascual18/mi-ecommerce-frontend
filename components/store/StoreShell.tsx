@@ -133,10 +133,13 @@ function Footer() {
         </div>
 
         <div>
-          <h4 className="font-heading font-bold text-white mb-3 text-xs uppercase tracking-wider">Atención</h4>
+          <h4 className="font-heading font-bold text-white mb-3 text-xs uppercase tracking-wider">Atención & Contacto</h4>
           <ul className="space-y-2 text-slate-400">
             <li className="flex items-center gap-1.5 font-bold text-emerald-400">
               <IconWhatsapp className="w-4 h-4" /> +{config.whatsappNumber}
+            </li>
+            <li className="flex items-center gap-1.5 font-bold text-amber-300">
+              <span>✉️ info@pyr-store.com</span>
             </li>
             <li>
               <Link href="/login" className="hover:text-white transition flex items-center gap-1 mt-1">

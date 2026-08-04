@@ -5,16 +5,16 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 const ALL_LINKS = [
-  { href: '/dashboard', label: '📊 Dashboard Operativo', roles: ['admin'] },
-  { href: '/pedidos', label: '📦 CRM Pedidos & Flujo', roles: ['admin', 'vendedor', 'almacen'] },
-  { href: '/logistica', label: '🚚 Logística & Despachos', roles: ['admin', 'almacen'] },
-  { href: '/editor', label: '🎨 Editor de Plantilla Web', roles: ['admin'] },
-  { href: '/metricas', label: '📈 Métricas & Analítica', roles: ['admin'] },
-  { href: '/inventario/modificar', label: '🛍️ Catálogo & Productos', roles: ['admin', 'vendedor', 'almacen'] },
-  { href: '/venta', label: '💼 Registro de Ventas', roles: ['admin', 'vendedor'] },
-  { href: '/clientes', label: '👤 Clientes', roles: ['admin', 'vendedor'] },
-  { href: '/usuarios', label: '👑 Usuarios & Roles', roles: ['admin'] },
-  { href: '/configuracion', label: '⚙️ Configuración', roles: ['admin'] },
+  { href: '/dashboard', label: '📊 Dashboard Operativo', key: 'dashboard' },
+  { href: '/pedidos', label: '📦 CRM Pedidos & Flujo', key: 'pedidos' },
+  { href: '/logistica', label: '🚚 Logística & Despachos', key: 'logistica' },
+  { href: '/editor', label: '🎨 Editor de Plantilla Web', key: 'editor' },
+  { href: '/metricas', label: '📈 Métricas & Analítica', key: 'metricas' },
+  { href: '/inventario/modificar', label: '🛍️ Catálogo & Productos', key: 'inventario' },
+  { href: '/venta', label: '💼 Registro de Ventas', key: 'venta' },
+  { href: '/clientes', label: '👤 Clientes', key: 'clientes' },
+  { href: '/usuarios', label: '👑 Usuarios & Permisos', key: 'usuarios' },
+  { href: '/configuracion', label: '⚙️ Configuración & Envíos', key: 'configuracion' },
 ];
 
 const Sidebar = () => {
@@ -32,8 +32,16 @@ const Sidebar = () => {
     }
   }, []);
 
-  const currentRol = user?.rol || 'admin';
-  const visibleLinks = ALL_LINKS.filter(link => link.roles.includes(currentRol));
+  const correo = user?.correo?.toLowerCase() || '';
+  const isSuperadmin = correo === 'mpascual@pyr-store.com' || user?.rol === 'superadmin' || user?.rol === 'admin';
+  const modulosUsuario = Array.isArray(user?.modulos) ? user.modulos : [];
+
+  // Filtrar links según permisos de módulos asignados por el Superadmin
+  const visibleLinks = ALL_LINKS.filter((link) => {
+    if (isSuperadmin) return true;
+    if (link.key === 'usuarios') return false; // Solo Superadmin puede administrar usuarios
+    return modulosUsuario.includes(link.key);
+  });
 
   return (
     <div className="w-64 min-h-screen bg-slate-900 text-white flex flex-col justify-between shadow-xl">
@@ -43,16 +51,21 @@ const Sidebar = () => {
             <span className="w-8 h-8 rounded-xl bg-red-600 text-white flex items-center justify-center text-sm shadow-md">🛍️</span>
             <span>P&R STORE</span>
           </div>
-          
+
           {user && (
             <div className="pt-2 flex items-center justify-between text-[11px] text-slate-400">
-              <span className="font-bold text-slate-200 truncate max-w-[130px]">{user.nombre}</span>
-              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
-                currentRol === 'admin' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
-                currentRol === 'vendedor' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-              }`}>
-                {currentRol === 'admin' ? '👑 Admin' : currentRol === 'vendedor' ? '💼 Vendedor' : '📦 Almacén'}
+              <div className="truncate max-w-[130px]">
+                <span className="font-bold text-slate-200 block truncate">{user.nombre}</span>
+                <span className="text-[9px] text-amber-400 block truncate font-mono">{user.correo}</span>
+              </div>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
+                  isSuperadmin
+                    ? 'bg-amber-400 text-slate-950 shadow-xs'
+                    : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                }`}
+              >
+                {isSuperadmin ? '👑 Superadmin' : '👤 Personal'}
               </span>
             </div>
           )}
@@ -86,7 +99,9 @@ const Sidebar = () => {
         </Link>
         <button
           onClick={() => {
-            try { localStorage.removeItem('pyr_user'); } catch (e) {}
+            try {
+              localStorage.removeItem('pyr_user');
+            } catch (e) {}
             window.location.href = '/login';
           }}
           className="block w-full text-center bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold py-2 rounded-xl transition border border-slate-700"
