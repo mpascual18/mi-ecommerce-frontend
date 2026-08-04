@@ -16,6 +16,10 @@ import {
   IconBolt,
 } from './Icons';
 
+function linkWhatsapp(numero: string, mensaje: string) {
+  return `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
+}
+
 function Ticker() {
   const { config } = useCart();
   return (
@@ -37,7 +41,7 @@ function Ticker() {
 }
 
 function Header() {
-  const { config, totalUnidades, setCartOpen } = useCart();
+  const { config } = useCart();
   const router = useRouter();
   const [busqueda, setBusqueda] = useState('');
 
@@ -86,14 +90,15 @@ function Header() {
             <span>Acceso al Sistema</span>
           </Link>
 
-          <button
-            onClick={() => setCartOpen(true)}
-            className="relative bg-brand-red hover:bg-brand-darkred text-white p-2.5 md:px-5 md:py-2.5 rounded-full font-bold text-xs md:text-sm flex items-center gap-2 shadow-md hover:shadow-lg transition"
+          <a
+            href={linkWhatsapp(config.whatsappNumber, `Hola ${config.storeName}, quiero más información sobre sus productos 🙂`)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="relative bg-emerald-600 hover:bg-emerald-700 text-white p-2.5 md:px-5 md:py-2.5 rounded-full font-bold text-xs md:text-sm flex items-center gap-2 shadow-md hover:shadow-lg transition"
           >
-            <IconBag className="w-4 h-4 text-brand-gold" />
-            <span className="hidden md:inline font-heading tracking-wide">Carrito</span>
-            <span className="bg-brand-gold text-brand-grafito text-xs font-black px-2 py-0.5 rounded-full shadow-xs">{totalUnidades}</span>
-          </button>
+            <IconWhatsapp className="w-4 h-4" />
+            <span className="hidden md:inline font-heading tracking-wide">WhatsApp</span>
+          </a>
         </div>
       </div>
     </header>

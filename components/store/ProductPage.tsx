@@ -4,10 +4,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { API_URL } from '@/lib/api';
 import { useCart, soles } from './CartContext';
-import { FALLBACK_IMAGE, Producto, precioDe, precioAnteriorDe, productoHref, galeriaCompleta } from './constants';
+import { FALLBACK_IMAGE, Producto, precioDe, precioAnteriorDe, productoHref, galeriaCompleta, sanearDescripcionHtml } from './constants';
 import {
   IconChevronLeft,
-  IconBag,
   IconBolt,
   IconShieldCheck,
   IconTruck,
@@ -15,6 +14,9 @@ import {
   IconWhatsapp,
   IconLock,
 } from './Icons';
+
+const UMBRAL_ENVIO_GRATIS = 30;
+const COSTO_ENVIO = 15;
 
 const FAQS = [
   {
@@ -188,7 +190,12 @@ export default function ProductPage({ slug }: { slug: string }) {
             )}
           </div>
 
-          <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{producto.descripcion || 'Producto importado de alta calidad.'}</p>
+          <div
+            className="text-sm text-slate-600 leading-relaxed whitespace-pre-line [&_img]:rounded-xl [&_img]:max-w-full [&_img]:my-2"
+            dangerouslySetInnerHTML={{
+              __html: producto.descripcion ? sanearDescripcionHtml(producto.descripcion) : 'Producto importado de alta calidad.',
+            }}
+          />
 
           <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 border-y border-slate-100 py-3 flex-wrap">
             <span className="flex items-center gap-1.5"><IconShieldCheck className="w-4 h-4 text-brand-red" /> Calidad garantizada</span>
@@ -207,21 +214,24 @@ export default function ProductPage({ slug }: { slug: string }) {
               <option value={2}>2 Unidades (Combo Pareja) - {soles(precio * 1.8)}</option>
               <option value={3}>3 Unidades (Pack Familiar) - {soles(precio * 2.4)}</option>
             </select>
+
+            {precioCombo > UMBRAL_ENVIO_GRATIS ? (
+              <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-3 py-1.5 rounded-full">
+                <IconTruck className="w-3.5 h-3.5" /> Envío GRATIS 🎉
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-600 border border-slate-200 text-xs font-bold px-3 py-1.5 rounded-full">
+                <IconTruck className="w-3.5 h-3.5" /> Costo de envío: {soles(COSTO_ENVIO)}
+              </span>
+            )}
           </div>
 
-          <div className="hidden md:grid grid-cols-2 gap-3 pt-1">
-            <button
-              onClick={() => addToCart({ id: producto.id, title: producto.nombre, price: precioCombo / qty, image: producto.imagen_url || FALLBACK_IMAGE }, qty)}
-              className="w-full bg-brand-grafito hover:bg-slate-800 text-white font-bold py-3.5 px-4 rounded-2xl text-xs flex items-center justify-center gap-2"
-            >
-              <IconBag className="w-4 h-4 text-brand-gold" />
-              Agregar al Carrito
-            </button>
+          <div className="hidden md:block pt-1">
             <button
               onClick={agregarYAbrir}
-              className="w-full bg-brand-red hover:bg-brand-darkred text-white font-heading font-extrabold py-3.5 px-4 rounded-2xl text-xs flex items-center justify-center gap-2"
+              className="w-full bg-brand-red hover:bg-brand-darkred text-white font-heading font-extrabold py-4 px-4 rounded-2xl text-sm shadow-lg hover:shadow-xl transition flex items-center justify-center gap-2"
             >
-              <IconBolt className="w-4 h-4" />
+              <IconBolt className="w-5 h-5" />
               Comprar Ahora
             </button>
           </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import DataTable from '@/components/ui/DataTable';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
@@ -93,6 +93,9 @@ export default function ModificarInventarioPage() {
   const [guardando, setGuardando] = useState(false);
   const [eliminando, setEliminando] = useState(false);
   const [subiendoImagenes, setSubiendoImagenes] = useState(false);
+  const [modalKey, setModalKey] = useState(0);
+  const descripcionRef = useRef(null);
+  const imagenDescripcionInputRef = useRef(null);
 
   const obtenerProductos = async () => {
     setCargando(true);
@@ -115,10 +118,58 @@ export default function ModificarInventarioPage() {
 
   const abrirNuevoProducto = () => {
     setProductoEditando({ ...PRODUCTO_VACIO });
+    setModalKey((k) => k + 1);
   };
 
   const abrirEdicion = (p) => {
     setProductoEditando(p);
+    setModalKey((k) => k + 1);
+  };
+
+  // Sincroniza el contenido del editor de descripción cada vez que se abre el modal
+  // (nuevo producto o edición). No se vuelve a pisar en cada tecla para no perder
+  // la posición del cursor mientras el usuario escribe.
+  useEffect(() => {
+    if (productoEditando && descripcionRef.current) {
+      descripcionRef.current.innerHTML = productoEditando.descripcion || '';
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalKey]);
+
+  const handleDescripcionInput = (e) => {
+    setProductoEditando((prev) => ({ ...prev, descripcion: e.currentTarget.innerHTML }));
+  };
+
+  // Ejecuta un comando de formato (negrita, cursiva, tamaño) sobre la selección actual
+  // del editor de descripción y sincroniza el resultado al estado.
+  const formatearDescripcion = (comando, valor = null) => {
+    if (!descripcionRef.current) return;
+    descripcionRef.current.focus();
+    document.execCommand(comando, false, valor ?? undefined);
+    setProductoEditando((prev) => ({ ...prev, descripcion: descripcionRef.current.innerHTML }));
+  };
+
+  // Inserta una imagen o GIF dentro del texto de la descripción, en la posición del cursor
+  const handleInsertarImagenDescripcion = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const dataUrl = await procesarImagen(file);
+      if (descripcionRef.current) {
+        descripcionRef.current.focus();
+        document.execCommand(
+          'insertHTML',
+          false,
+          `<img src="${dataUrl}" style="max-width:100%;border-radius:12px;margin:8px 0;display:block;" />`
+        );
+        setProductoEditando((prev) => ({ ...prev, descripcion: descripcionRef.current.innerHTML }));
+      }
+    } catch (error) {
+      console.error('Error al insertar imagen en descripción:', error);
+      toast.error('No se pudo insertar la imagen.');
+    } finally {
+      e.target.value = '';
+    }
   };
 
   const handleInputChange = (e) => {
@@ -397,15 +448,76 @@ export default function ModificarInventarioPage() {
 
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">Descripción</label>
-              <textarea
-                name="descripcion"
-                rows={5}
-                placeholder={'Cuenta qué hace especial a este producto...\nPuedes usar varias líneas y emojis 😍✨'}
-                value={productoEditando.descripcion ?? ''}
-                onChange={handleInputChange}
-                className="w-full bg-white border border-gray-300 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none"
-              />
+              <div className="border border-gray-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-red-500">
+                <div className="flex flex-wrap items-center gap-1 bg-gray-50 border-b border-gray-200 p-1.5">
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => formatearDescripcion('bold')}
+                    className="w-7 h-7 rounded-lg bg-white border border-gray-300 font-black text-xs hover:bg-gray-100"
+                    title="Negrita"
+                  >
+                    B
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => formatearDescripcion('italic')}
+                    className="w-7 h-7 rounded-lg bg-white border border-gray-300 italic text-xs hover:bg-gray-100"
+                    title="Cursiva"
+                  >
+                    I
+                  </button>
+                  <select
+                    onMouseDown={(e) => e.preventDefault()}
+                    onChange={(e) => {
+                      if (e.target.value) formatearDescripcion('fontSize', e.target.value);
+                      e.target.value = '';
+                    }}
+                    defaultValue=""
+                    className="h-7 rounded-lg bg-white border border-gray-300 text-[11px] font-bold px-1"
+                    title="Tamaño de texto"
+                  >
+                    <option value="" disabled>Tamaño</option>
+                    <option value="2">Pequeño</option>
+                    <option value="3">Normal</option>
+                    <option value="5">Grande</option>
+                    <option value="7">Título</option>
+                  </select>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => imagenDescripcionInputRef.current?.click()}
+                    className="h-7 px-2 rounded-lg bg-white border border-gray-300 text-[11px] font-bold hover:bg-gray-100 flex items-center gap-1"
+                    title="Insertar imagen o GIF"
+                  >
+                    🖼️ Imagen/GIF
+                  </button>
+                  <input
+                    ref={imagenDescripcionInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleInsertarImagenDescripcion}
+                    className="hidden"
+                  />
+                </div>
+                <div
+                  ref={descripcionRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  onInput={handleDescripcionInput}
+                  data-placeholder="Cuenta qué hace especial a este producto... puedes usar negrita, tamaños, emojis 😍✨ e insertar imágenes o gifs"
+                  className="descripcion-editor w-full min-h-[120px] max-h-64 overflow-y-auto p-2.5 text-sm focus:outline-none"
+                />
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1">Selecciona texto y usa los botones para darle formato. También puedes insertar imágenes o GIFs en cualquier punto del texto.</p>
             </div>
+            <style jsx>{`
+              .descripcion-editor:empty:before {
+                content: attr(data-placeholder);
+                color: #9ca3af;
+              }
+            `}</style>
 
             {/* IMÁGENES DEL PRODUCTO (unificado: principal + galería, máx. 5) */}
             <div className="border border-dashed border-gray-300 p-3 rounded-2xl bg-gray-50 space-y-2">

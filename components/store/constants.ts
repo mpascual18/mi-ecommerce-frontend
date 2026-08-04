@@ -17,6 +17,21 @@ export type Producto = {
   gif_url?: string;
 };
 
+/**
+ * Saneo básico del HTML de la descripción enriquecida (viene del editor del ERP).
+ * No es un sanitizador exhaustivo, pero evita el vector de XSS más obvio (scripts,
+ * iframes y atributos on*) por si algún día se filtra contenido no confiable.
+ */
+export function sanearDescripcionHtml(html?: string): string {
+  if (!html) return '';
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+    .replace(/\son\w+="[^"]*"/gi, '')
+    .replace(/\son\w+='[^']*'/gi, '')
+    .replace(/javascript:/gi, '');
+}
+
 /** Convierte el textarea "uno por línea" en un array limpio, sin líneas vacías */
 export function lineasA(texto?: string): string[] {
   return (texto || '')
