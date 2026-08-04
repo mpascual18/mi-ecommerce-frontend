@@ -1,6 +1,16 @@
 export const FALLBACK_IMAGE =
   'https://images.unsplash.com/photo-1570197788417-0e82375c9371?q=80&w=800&auto=format&fit=crop';
 
+/** Regla de envío: si el total (unitario o la suma de varias unidades) supera el
+ * umbral, el envío es gratis; si no, se cobra el costo fijo indicado. */
+export const UMBRAL_ENVIO_GRATIS = 30;
+export const COSTO_ENVIO = 15;
+
+export function calcularEnvio(totalSoles: number): { gratis: boolean; costo: number } {
+  const gratis = totalSoles > UMBRAL_ENVIO_GRATIS;
+  return { gratis, costo: gratis ? 0 : COSTO_ENVIO };
+}
+
 export type Producto = {
   id: number | string;
   nombre: string;

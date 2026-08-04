@@ -136,8 +136,14 @@ export default function ModificarInventarioPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalKey]);
 
+  // Nota: leemos el HTML de forma SÍNCRONA en una variable local antes de llamar a
+  // setProductoEditando. Tanto `e.currentTarget` (evento sintético de React) como
+  // `descripcionRef.current` pueden volverse null si se leen dentro de la función
+  // "updater" de setState, porque esa función puede ejecutarse en un tick posterior
+  // (por eso el editor "no dejaba editar": tiraba abajo toda la app con un TypeError).
   const handleDescripcionInput = (e) => {
-    setProductoEditando((prev) => ({ ...prev, descripcion: e.currentTarget.innerHTML }));
+    const html = e.currentTarget.innerHTML;
+    setProductoEditando((prev) => ({ ...prev, descripcion: html }));
   };
 
   // Ejecuta un comando de formato (negrita, cursiva, tamaño) sobre la selección actual
@@ -146,7 +152,8 @@ export default function ModificarInventarioPage() {
     if (!descripcionRef.current) return;
     descripcionRef.current.focus();
     document.execCommand(comando, false, valor ?? undefined);
-    setProductoEditando((prev) => ({ ...prev, descripcion: descripcionRef.current.innerHTML }));
+    const html = descripcionRef.current.innerHTML;
+    setProductoEditando((prev) => ({ ...prev, descripcion: html }));
   };
 
   // Inserta una imagen o GIF dentro del texto de la descripción, en la posición del cursor
@@ -162,7 +169,8 @@ export default function ModificarInventarioPage() {
           false,
           `<img src="${dataUrl}" style="max-width:100%;border-radius:12px;margin:8px 0;display:block;" />`
         );
-        setProductoEditando((prev) => ({ ...prev, descripcion: descripcionRef.current.innerHTML }));
+        const html = descripcionRef.current.innerHTML;
+        setProductoEditando((prev) => ({ ...prev, descripcion: html }));
       }
     } catch (error) {
       console.error('Error al insertar imagen en descripción:', error);

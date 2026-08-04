@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { API_URL } from '@/lib/api';
+import { calcularEnvio } from './constants';
 
 export type StoreConfig = {
   whatsappNumber: string;
@@ -134,6 +135,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     setEnviando(true);
     const provincia = regionTipo === 'lima' ? 'Lima' : distrito;
+    const envio = calcularEnvio(totalCarrito);
+    const totalConEnvio = totalCarrito + envio.costo;
 
     try {
       await fetch(`${API_URL}/api/pedidos`, {
@@ -145,7 +148,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           direccion,
           distrito,
           provincia,
-          total: totalCarrito,
+          total: totalConEnvio,
           origen: 'tienda_web',
           metodo_pago: metodoPago,
           items: cart.map((i) => ({ producto_id: i.id, cantidad: i.qty, precio_unitario: i.price })),
@@ -156,7 +159,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     const itemsFormateados = cart.map((i) => `• ${i.title} (x${i.qty}) - ${soles(i.price * i.qty)}`).join('\n');
-    const mensaje = `🛒 *NUEVO PEDIDO - P&R STORE*\n----------------------------------------\n📦 *PRODUCTOS:*\n${itemsFormateados}\n\n----------------------------------------\n💰 *TOTAL:* ${soles(totalCarrito)}\n🚚 *ZONA:* ${regionTipo === 'lima' ? 'Lima Metropolitana' : 'Provincia'}\n💳 *MÉTODO DE PAGO:* ${metodoPago}\n\n👤 *DATOS DEL CLIENTE:*\n• Nombre: ${nombre}\n• Teléfono: ${celular}\n• Distrito/Ciudad: ${distrito}\n• Dirección: ${direccion}\n\n----------------------------------------\nPor favor confirmar stock y horario de despacho.`;
+    const lineaEnvio = envio.gratis ? 'GRATIS 🎉' : soles(envio.costo);
+    const mensaje = `🛒 *NUEVO PEDIDO - P&R STORE*\n----------------------------------------\n📦 *PRODUCTOS:*\n${itemsFormateados}\n\n----------------------------------------\n🚚 *ENVÍO:* ${lineaEnvio}\n💰 *TOTAL:* ${soles(totalConEnvio)}\n📍 *ZONA:* ${regionTipo === 'lima' ? 'Lima Metropolitana' : 'Provincia'}\n💳 *MÉTODO DE PAGO:* ${metodoPago}\n\n👤 *DATOS DEL CLIENTE:*\n• Nombre: ${nombre}\n• Teléfono: ${celular}\n• Distrito/Ciudad: ${distrito}\n• Dirección: ${direccion}\n\n----------------------------------------\nPor favor confirmar stock y horario de despacho.`;
 
     window.open(`https://wa.me/${config.whatsappNumber}?text=${encodeURIComponent(mensaje)}`, '_blank');
 

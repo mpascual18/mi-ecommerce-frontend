@@ -4,7 +4,17 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { API_URL } from '@/lib/api';
 import { useCart, soles } from './CartContext';
-import { FALLBACK_IMAGE, Producto, precioDe, precioAnteriorDe, productoHref, galeriaCompleta, sanearDescripcionHtml } from './constants';
+import {
+  FALLBACK_IMAGE,
+  Producto,
+  precioDe,
+  precioAnteriorDe,
+  productoHref,
+  galeriaCompleta,
+  sanearDescripcionHtml,
+  calcularEnvio,
+  COSTO_ENVIO,
+} from './constants';
 import {
   IconChevronLeft,
   IconBolt,
@@ -14,9 +24,6 @@ import {
   IconWhatsapp,
   IconLock,
 } from './Icons';
-
-const UMBRAL_ENVIO_GRATIS = 30;
-const COSTO_ENVIO = 15;
 
 const FAQS = [
   {
@@ -119,6 +126,7 @@ export default function ProductPage({ slug }: { slug: string }) {
   const descuento = anterior ? Math.round(((anterior - precio) / anterior) * 100) : 0;
   const precioCombo = qty === 1 ? precio : qty === 2 ? precio * 1.8 : precio * 2.4;
   const galeria = galeriaCompleta(producto);
+  const envio = calcularEnvio(precioCombo);
 
   function agregarYAbrir() {
     if (!producto) return;
@@ -197,10 +205,10 @@ export default function ProductPage({ slug }: { slug: string }) {
             }}
           />
 
-          <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 border-y border-slate-100 py-3 flex-wrap">
-            <span className="flex items-center gap-1.5"><IconShieldCheck className="w-4 h-4 text-brand-red" /> Calidad garantizada</span>
-            <span className="flex items-center gap-1.5"><IconTruck className="w-4 h-4 text-brand-red" /> Envíos a todo el país</span>
-            <span className="flex items-center gap-1.5"><IconLock className="w-4 h-4 text-brand-red" /> Pago contra entrega</span>
+          <div className="flex items-center gap-4 text-sm font-semibold text-slate-500 border-y border-slate-100 py-3 flex-wrap">
+            <span className="flex items-center gap-1.5"><IconShieldCheck className="w-[18px] h-[18px] text-brand-red" /> Calidad garantizada</span>
+            <span className="flex items-center gap-1.5"><IconTruck className="w-[18px] h-[18px] text-brand-red" /> Envíos a todo el país</span>
+            <span className="flex items-center gap-1.5"><IconLock className="w-[18px] h-[18px] text-brand-red" /> Pago contra entrega</span>
           </div>
 
           <div className="space-y-2">
@@ -215,13 +223,13 @@ export default function ProductPage({ slug }: { slug: string }) {
               <option value={3}>3 Unidades (Pack Familiar) - {soles(precio * 2.4)}</option>
             </select>
 
-            {precioCombo > UMBRAL_ENVIO_GRATIS ? (
-              <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-3 py-1.5 rounded-full">
-                <IconTruck className="w-3.5 h-3.5" /> Envío GRATIS 🎉
+            {envio.gratis ? (
+              <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm font-bold px-3.5 py-2 rounded-full">
+                <IconTruck className="w-4 h-4" /> Envío GRATIS 🎉
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-600 border border-slate-200 text-xs font-bold px-3 py-1.5 rounded-full">
-                <IconTruck className="w-3.5 h-3.5" /> Costo de envío: {soles(COSTO_ENVIO)}
+              <span className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-600 border border-slate-200 text-sm font-bold px-3.5 py-2 rounded-full">
+                <IconTruck className="w-4 h-4" /> Costo de envío: {soles(COSTO_ENVIO)}
               </span>
             )}
           </div>
@@ -229,7 +237,7 @@ export default function ProductPage({ slug }: { slug: string }) {
           <div className="hidden md:block pt-1">
             <button
               onClick={agregarYAbrir}
-              className="w-full bg-brand-red hover:bg-brand-darkred text-white font-heading font-extrabold py-4 px-4 rounded-2xl text-sm shadow-lg hover:shadow-xl transition flex items-center justify-center gap-2"
+              className="w-full bg-brand-red hover:bg-brand-darkred text-white font-heading font-extrabold py-4 px-4 rounded-2xl text-base shadow-lg hover:shadow-xl transition flex items-center justify-center gap-2"
             >
               <IconBolt className="w-5 h-5" />
               Comprar Ahora
@@ -279,9 +287,9 @@ export default function ProductPage({ slug }: { slug: string }) {
         </div>
         <button
           onClick={agregarYAbrir}
-          className="flex-1 bg-brand-red hover:bg-brand-darkred text-white font-heading font-extrabold py-3 px-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-md"
+          className="flex-1 bg-brand-red hover:bg-brand-darkred text-white font-heading font-extrabold py-3.5 px-4 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-md"
         >
-          <IconWhatsapp className="w-4 h-4" />
+          <IconWhatsapp className="w-5 h-5" />
           Comprar Ahora
         </button>
       </div>

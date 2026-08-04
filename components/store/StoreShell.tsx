@@ -4,7 +4,7 @@ import { ReactNode, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CartProvider, useCart, soles } from './CartContext';
-import { FALLBACK_IMAGE } from './constants';
+import { FALLBACK_IMAGE, calcularEnvio, COSTO_ENVIO } from './constants';
 import {
   IconKey,
   IconBag,
@@ -14,6 +14,7 @@ import {
   IconPlus,
   IconWhatsapp,
   IconBolt,
+  IconTruck,
 } from './Icons';
 
 function linkWhatsapp(numero: string, mensaje: string) {
@@ -170,6 +171,8 @@ function CartDrawer() {
 
   if (!cartOpen) return null;
 
+  const envioPedido = calcularEnvio(totalCarrito);
+
   return (
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/50" onClick={() => setCartOpen(false)} />
@@ -221,9 +224,21 @@ function CartDrawer() {
 
         {cart.length > 0 && !pedidoConfirmado && (
           <div className="border-t border-slate-200 p-4 bg-slate-50 space-y-3 shrink-0 max-h-[60vh] overflow-y-auto">
+            <div className="flex justify-between items-center text-sm font-bold text-slate-500">
+              <span className="flex items-center gap-1.5"><IconTruck className="w-4 h-4" /> Envío</span>
+              <span className={envioPedido.gratis ? 'text-emerald-700 font-black' : 'text-slate-700 font-black'}>
+                {envioPedido.gratis ? 'GRATIS' : soles(COSTO_ENVIO)}
+              </span>
+            </div>
+            {envioPedido.gratis && (
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold rounded-xl px-3 py-2 text-center">
+                🎉 ¡Tu pedido califica para envío gratis!
+              </div>
+            )}
+
             <div className="flex justify-between items-center text-lg font-heading font-black">
               <span>TOTAL:</span>
-              <span className="text-brand-red text-2xl font-black">{soles(totalCarrito)}</span>
+              <span className="text-brand-red text-2xl font-black">{soles(totalCarrito + envioPedido.costo)}</span>
             </div>
 
             <div className="space-y-2 text-xs">
