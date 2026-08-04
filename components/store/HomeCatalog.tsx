@@ -109,7 +109,9 @@ export default function HomeCatalog() {
               </div>
 
               <div className="flex gap-4 items-center">
-                <img src={productoDestacado.imagen_url || FALLBACK_IMAGE} alt={productoDestacado.nombre} className="w-24 h-24 object-cover rounded-2xl border border-slate-200" />
+                <div className="w-24 h-24 rounded-2xl border border-slate-200 bg-white flex items-center justify-center shrink-0 overflow-hidden">
+                  <img src={productoDestacado.imagen_url || FALLBACK_IMAGE} alt={productoDestacado.nombre} className="w-full h-full object-contain" />
+                </div>
                 <div>
                   <h3 className="text-base font-heading font-bold text-brand-grafito line-clamp-2">{productoDestacado.nombre}</h3>
                   <p className="text-xs text-brand-grismedio mt-1 line-clamp-2">{productoDestacado.descripcion}</p>
@@ -191,14 +193,16 @@ export default function HomeCatalog() {
               const descuento = anterior ? Math.round(((anterior - precio) / anterior) * 100) : 0;
               return (
                 <div key={p.id} className="store-luxury-card bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-2xs flex flex-col justify-between">
-                  <Link href={productoHref(p)} className="relative overflow-hidden bg-slate-100 block">
+                  <Link href={productoHref(p)} className="relative overflow-hidden bg-white block">
                     {p.badge && p.badge !== 'SIN BADGE' && (
                       <span className="absolute top-3 left-3 bg-brand-red text-white text-[10px] font-heading font-extrabold px-2.5 py-1 rounded-md uppercase z-10 shadow-xs">{p.badge}</span>
                     )}
                     {descuento > 0 && (
                       <span className="absolute top-3 right-3 bg-brand-gold text-brand-grafito text-[10px] font-heading font-black px-2.5 py-1 rounded-md z-10 shadow-xs">-{descuento}% OFF</span>
                     )}
-                    <img src={p.imagen_url || FALLBACK_IMAGE} alt={p.nombre} className="store-img-zoom w-full h-52 sm:h-60 object-cover" />
+                    <div className="w-full h-52 sm:h-60 flex items-center justify-center bg-white">
+                      <img src={p.imagen_url || FALLBACK_IMAGE} alt={p.nombre} className="store-img-zoom w-full h-full object-contain" />
+                    </div>
                   </Link>
 
                   <div className="p-4 flex-1 flex flex-col justify-between space-y-3">

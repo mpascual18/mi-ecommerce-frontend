@@ -193,7 +193,9 @@ function CartDrawer() {
           ) : (
             cart.map((item) => (
               <div key={String(item.id)} className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                <img src={item.image || FALLBACK_IMAGE} alt={item.title} className="w-14 h-14 object-cover rounded-xl border border-slate-200" />
+                <div className="w-14 h-14 rounded-xl border border-slate-200 bg-white flex items-center justify-center shrink-0 overflow-hidden">
+                  <img src={item.image || FALLBACK_IMAGE} alt={item.title} className="w-full h-full object-contain" />
+                </div>
                 <div className="flex-1 space-y-1">
                   <h4 className="font-bold text-xs text-brand-grafito line-clamp-1">{item.title}</h4>
                   <span className="text-xs font-black text-brand-red">{soles(item.price * item.qty)}</span>

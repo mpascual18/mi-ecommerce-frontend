@@ -9,6 +9,65 @@ import { useToast } from '@/components/ui/ToastProvider';
 import { useConfirm } from '@/components/ui/ConfirmDialogProvider';
 import { API_URL } from '@/lib/api';
 
+const PRODUCTO_VACIO = {
+  nombre: '',
+  sku: '',
+  price_soles: '',
+  price_oferta: '',
+  stock: '',
+  categoria: 'General',
+  badge: 'SIN BADGE',
+  imagen_url: '',
+  descripcion: '',
+  hook_titulo: '',
+  beneficios: '',
+  galeria_urls: '',
+  gif_url: '',
+};
+
+const MAX_GALERIA = 5;
+
+function comprimirImagen(file, { maxDim = 1200, calidad = 0.88 } = {}) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          }
+        } else if (height > maxDim) {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', calidad));
+      };
+      img.onerror = reject;
+      img.src = event.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function lineasA(texto) {
+  return (texto || '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+}
+
 export default function ModificarInventarioPage() {
   const toast = useToast();
   const confirm = useConfirm();
@@ -18,6 +77,7 @@ export default function ModificarInventarioPage() {
   const [guardando, setGuardando] = useState(false);
   const [eliminando, setEliminando] = useState(false);
   const [imagenPreview, setImagenPreview] = useState('');
+  const [subiendoGaleria, setSubiendoGaleria] = useState(false);
 
   const obtenerProductos = async () => {
     setCargando(true);
@@ -35,7 +95,18 @@ export default function ModificarInventarioPage() {
 
   useEffect(() => {
     obtenerProductos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const abrirNuevoProducto = () => {
+    setProductoEditando({ ...PRODUCTO_VACIO });
+    setImagenPreview('');
+  };
+
+  const abrirEdicion = (p) => {
+    setProductoEditando(p);
+    setImagenPreview(p.imagen_url || '');
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -45,49 +116,64 @@ export default function ModificarInventarioPage() {
     }));
   };
 
-  // Compresión automática de imágenes en el cliente (Máx 800px) para máxima velocidad
-  const handleFileUpload = (e) => {
+  // Compresión automática de la imagen principal en el cliente
+  const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    try {
+      const compressed = await comprimirImagen(file);
+      setImagenPreview(compressed);
+      setProductoEditando((prev) => ({ ...prev, imagen_url: compressed }));
+    } catch (error) {
+      console.error('Error al comprimir imagen:', error);
+      toast.error('No se pudo procesar la imagen.');
+    }
+  };
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target.result;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const maxDim = 800;
-        let width = img.width;
-        let height = img.height;
+  // Subida de imágenes adicionales para la galería (máx. 5)
+  const handleGaleriaFileUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-        if (width > height) {
-          if (width > maxDim) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          }
-        } else {
-          if (height > maxDim) {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
-          }
-        }
+    const actuales = lineasA(productoEditando.galeria_urls);
+    const espacioDisponible = MAX_GALERIA - actuales.length;
 
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
+    if (espacioDisponible <= 0) {
+      toast.error(`Ya tienes el máximo de ${MAX_GALERIA} imágenes en la galería.`);
+      e.target.value = '';
+      return;
+    }
 
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
-        setImagenPreview(compressedBase64);
-        setProductoEditando((prev) => ({ ...prev, imagen_url: compressedBase64 }));
-      };
-    };
-    reader.readAsDataURL(file);
+    setSubiendoGaleria(true);
+    try {
+      const aProcesar = files.slice(0, espacioDisponible);
+      const nuevas = await Promise.all(aProcesar.map((f) => comprimirImagen(f)));
+      const combinadas = [...actuales, ...nuevas];
+      setProductoEditando((prev) => ({ ...prev, galeria_urls: combinadas.join('\n') }));
+
+      if (files.length > espacioDisponible) {
+        toast.error(`Solo se agregaron ${espacioDisponible} imagen(es); el máximo es ${MAX_GALERIA}.`);
+      }
+    } catch (error) {
+      console.error('Error al procesar imágenes de galería:', error);
+      toast.error('No se pudieron procesar algunas imágenes.');
+    } finally {
+      setSubiendoGaleria(false);
+      e.target.value = '';
+    }
+  };
+
+  const quitarGaleriaImg = (idx) => {
+    const actuales = lineasA(productoEditando.galeria_urls);
+    actuales.splice(idx, 1);
+    setProductoEditando((prev) => ({ ...prev, galeria_urls: actuales.join('\n') }));
   };
 
   const guardarCambios = async (e) => {
     e.preventDefault();
     setGuardando(true);
+    const esNuevo = !productoEditando.id;
+
     try {
       const payload = {
         ...productoEditando,
@@ -96,18 +182,18 @@ export default function ModificarInventarioPage() {
         stock: Number(productoEditando.stock) || 0,
       };
 
-      const res = await fetch(`${API_URL}/api/productos/${productoEditando.id}`, {
-        method: 'PUT',
+      const res = await fetch(`${API_URL}/api/productos${esNuevo ? '' : `/${productoEditando.id}`}`, {
+        method: esNuevo ? 'POST' : 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       if (res.ok) {
-        toast.success('¡Producto e imagen actualizados correctamente!');
+        toast.success(esNuevo ? '¡Producto agregado al catálogo!' : '¡Producto actualizado correctamente!');
         setProductoEditando(null);
         obtenerProductos();
       } else {
-        toast.error('Error al actualizar el producto.');
+        toast.error(esNuevo ? 'Error al agregar el producto.' : 'Error al actualizar el producto.');
       }
     } catch (error) {
       console.error('Error al guardar cambios:', error);
@@ -147,13 +233,16 @@ export default function ModificarInventarioPage() {
     }
   };
 
+  const galeriaImgs = productoEditando ? lineasA(productoEditando.galeria_urls) : [];
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-4 flex-wrap">
         <div>
           <h1 className="text-3xl font-black text-gray-900">✏️ Modificar Inventario & Catálogo Web</h1>
           <p className="text-sm text-gray-500">Edita imágenes, precios de oferta, insignias y stock sincronizado en la web</p>
         </div>
+        <Button onClick={abrirNuevoProducto}>➕ Nuevo Producto</Button>
       </div>
 
       <DataTable
@@ -168,11 +257,13 @@ export default function ModificarInventarioPage() {
             key: 'imagen',
             header: 'Imagen',
             render: (p) => (
-              <img
-                src={p.imagen_url || 'https://images.unsplash.com/photo-1570197788417-0e82375c9371?q=80&w=800'}
-                alt={p.nombre}
-                className="w-12 h-12 object-cover rounded-lg border border-gray-200"
-              />
+              <div className="w-12 h-12 bg-white border border-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
+                <img
+                  src={p.imagen_url || 'https://images.unsplash.com/photo-1570197788417-0e82375c9371?q=80&w=800'}
+                  alt={p.nombre}
+                  className="w-full h-full object-contain"
+                />
+              </div>
             ),
           },
           { key: 'nombre', header: 'Producto', sortable: true, sortValue: (p) => p.nombre },
@@ -197,13 +288,7 @@ export default function ModificarInventarioPage() {
             key: 'acciones',
             header: 'Acciones',
             render: (p) => (
-              <button
-                className="text-red-600 font-bold hover:underline"
-                onClick={() => {
-                  setProductoEditando(p);
-                  setImagenPreview(p.imagen_url || '');
-                }}
-              >
+              <button className="text-red-600 font-bold hover:underline" onClick={() => abrirEdicion(p)}>
                 Editar
               </button>
             ),
@@ -213,7 +298,7 @@ export default function ModificarInventarioPage() {
 
       {productoEditando && (
         <Modal
-          title={`Editar Producto: ${productoEditando.nombre}`}
+          title={productoEditando.id ? `Editar Producto: ${productoEditando.nombre}` : '➕ Nuevo Producto'}
           onClose={() => setProductoEditando(null)}
           widthClassName="max-w-2xl"
         >
@@ -291,10 +376,17 @@ export default function ModificarInventarioPage() {
               </div>
             </div>
 
-            {/* IMAGEN SUBIDA VISUAL CON COMPRESION */}
+            <FormField
+              label="Descripción"
+              name="descripcion"
+              value={productoEditando.descripcion ?? ''}
+              onChange={handleInputChange}
+            />
+
+            {/* IMAGEN PRINCIPAL SUBIDA VISUAL CON COMPRESION */}
             <div className="border border-dashed border-gray-300 p-3 rounded-2xl bg-gray-50 space-y-2">
               <label className="block text-xs font-bold text-gray-800 uppercase">
-                Imagen del Producto (Subir o URL)
+                Imagen Principal del Producto (Subir o URL)
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
@@ -319,7 +411,9 @@ export default function ModificarInventarioPage() {
 
               {imagenPreview && (
                 <div className="flex items-center gap-3 pt-2">
-                  <img src={imagenPreview} alt="Preview" className="w-16 h-16 object-cover rounded-xl border border-gray-300" />
+                  <div className="w-16 h-16 bg-white border border-gray-300 rounded-xl flex items-center justify-center overflow-hidden">
+                    <img src={imagenPreview} alt="Preview" className="w-full h-full object-contain" />
+                  </div>
                   <span className="text-xs font-bold text-green-600">Vista previa lista para la tienda web</span>
                 </div>
               )}
@@ -359,18 +453,40 @@ export default function ModificarInventarioPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Imágenes Adicionales (una URL por línea, para la galería)
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-gray-700">
+                  Imágenes Adicionales de Galería ({galeriaImgs.length}/{MAX_GALERIA})
                 </label>
-                <textarea
-                  name="galeria_urls"
-                  rows={3}
-                  placeholder={'https://...\nhttps://...'}
-                  value={productoEditando.galeria_urls ?? ''}
-                  onChange={handleInputChange}
-                  className="w-full bg-white border border-gray-300 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
-                />
+
+                {galeriaImgs.length > 0 && (
+                  <div className="grid grid-cols-5 gap-2">
+                    {galeriaImgs.map((url, idx) => (
+                      <div key={idx} className="relative w-full aspect-square bg-white border border-gray-300 rounded-xl overflow-hidden flex items-center justify-center">
+                        <img src={url} alt={`Galería ${idx + 1}`} className="w-full h-full object-contain" />
+                        <button
+                          type="button"
+                          onClick={() => quitarGaleriaImg(idx)}
+                          className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-600 text-white rounded-full text-[10px] font-bold flex items-center justify-center shadow"
+                          title="Quitar imagen"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {galeriaImgs.length < MAX_GALERIA && (
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleGaleriaFileUpload}
+                    disabled={subiendoGaleria}
+                    className="text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-gray-800 file:text-white cursor-pointer"
+                  />
+                )}
+                {subiendoGaleria && <p className="text-[11px] text-gray-500">Procesando imágenes...</p>}
               </div>
 
               <div>
@@ -389,15 +505,19 @@ export default function ModificarInventarioPage() {
             </div>
 
             <div className="flex justify-between items-center pt-2">
-              <Button type="button" variant="danger" onClick={eliminarProducto} loading={eliminando}>
-                Eliminar del Catálogo
-              </Button>
+              {productoEditando.id ? (
+                <Button type="button" variant="danger" onClick={eliminarProducto} loading={eliminando}>
+                  Eliminar del Catálogo
+                </Button>
+              ) : (
+                <span />
+              )}
               <div className="flex gap-2">
                 <Button type="button" variant="secondary" onClick={() => setProductoEditando(null)}>
                   Cancelar
                 </Button>
                 <Button type="submit" loading={guardando}>
-                  Guardar Cambios
+                  {productoEditando.id ? 'Guardar Cambios' : 'Agregar Producto'}
                 </Button>
               </div>
             </div>

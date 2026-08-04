@@ -143,8 +143,8 @@ export default function ProductPage({ slug }: { slug: string }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
         {/* GALERIA */}
         <div className="space-y-3 md:sticky md:top-24">
-          <div className="rounded-3xl overflow-hidden border border-slate-200 bg-slate-100 shadow-xs">
-            <img src={galeria[imagenActiva] || FALLBACK_IMAGE} alt={producto.nombre} className="w-full h-80 md:h-[26rem] object-cover" />
+          <div className="rounded-3xl overflow-hidden border border-slate-200 bg-white shadow-xs aspect-square flex items-center justify-center">
+            <img src={galeria[imagenActiva] || FALLBACK_IMAGE} alt={producto.nombre} className="w-full h-full object-contain" />
           </div>
           {galeria.length > 1 && (
             <div className="flex gap-2 overflow-x-auto pb-1">
@@ -152,11 +152,11 @@ export default function ProductPage({ slug }: { slug: string }) {
                 <button
                   key={`${url}-${i}`}
                   onClick={() => setImagenActiva(i)}
-                  className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition ${
+                  className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 bg-white flex items-center justify-center transition ${
                     imagenActiva === i ? 'border-brand-red' : 'border-slate-200 opacity-80 hover:opacity-100'
                   }`}
                 >
-                  <img src={url} alt={`${producto.nombre} vista ${i + 1}`} className="w-full h-full object-cover" />
+                  <img src={url} alt={`${producto.nombre} vista ${i + 1}`} className="w-full h-full object-contain" />
                 </button>
               ))}
             </div>
@@ -262,7 +262,9 @@ export default function ProductPage({ slug }: { slug: string }) {
               const pAnterior = precioAnteriorDe(p);
               return (
                 <Link key={p.id} href={productoHref(p)} className="store-luxury-card bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-2xs block">
-                  <img src={p.imagen_url || FALLBACK_IMAGE} alt={p.nombre} className="store-img-zoom w-full h-36 object-cover" />
+                  <div className="w-full h-36 bg-white flex items-center justify-center">
+                    <img src={p.imagen_url || FALLBACK_IMAGE} alt={p.nombre} className="store-img-zoom w-full h-full object-contain" />
+                  </div>
                   <div className="p-3 space-y-1">
                     <h3 className="font-heading font-bold text-brand-grafito text-xs line-clamp-2">{p.nombre}</h3>
                     <div className="flex items-baseline gap-1.5">
