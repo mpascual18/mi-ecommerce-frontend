@@ -211,6 +211,17 @@ export default function HomeCatalog() {
                       <Link href={productoHref(p)} className="font-heading font-bold text-brand-grafito text-xs sm:text-sm line-clamp-2 hover:text-brand-red transition block">
                         {p.nombre}
                       </Link>
+
+                      {/* BARRA DE ESCASEZ DE STOCK */}
+                      <div className="pt-1">
+                        <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 mb-1">
+                          <span className="text-brand-red font-black">🔥 Stock Limitado</span>
+                          <span>{p.stock > 0 ? `${p.stock} quedantes` : 'Agotándose'}</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-red-500 to-amber-500 rounded-full" style={{ width: `${Math.min(100, Math.max(25, (p.stock || 5) * 10))}%` }} />
+                        </div>
+                      </div>
                     </div>
 
                     <div className="space-y-2 pt-2 border-t border-slate-100">
