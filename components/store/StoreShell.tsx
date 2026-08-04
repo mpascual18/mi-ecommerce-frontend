@@ -91,16 +91,15 @@ function Header() {
             <span>Acceso al Sistema</span>
           </Link>
 
-          <button
-            onClick={() => setCartOpen(true)}
-            className="relative bg-red-600 hover:bg-red-700 text-white p-2.5 md:px-5 md:py-2.5 rounded-full font-heading font-black text-xs md:text-sm flex items-center gap-2 shadow-md hover:shadow-lg transition"
+          <a
+            href={linkWhatsapp(config.whatsappNumber, `Hola ${config.storeName}, deseo consultar por un producto 🙂`)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="relative bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-full font-heading font-black text-xs md:text-sm flex items-center gap-2 shadow-md hover:shadow-lg transition transform hover:-translate-y-0.5"
           >
-            <IconBag className="w-4 h-4 text-amber-300" />
-            <span className="hidden md:inline font-heading tracking-wide">Carrito</span>
-            <span className="bg-amber-400 text-slate-950 text-xs font-black px-2 py-0.5 rounded-full shadow-xs">
-              {totalUnidades}
-            </span>
-          </button>
+            <IconWhatsapp className="w-4.5 h-4.5 text-white" />
+            <span className="font-heading tracking-wide">Contáctanos</span>
+          </a>
         </div>
       </div>
     </header>
@@ -111,44 +110,46 @@ function Footer() {
   const { config } = useCart();
   return (
     <footer className="bg-brand-grafito text-slate-300 text-xs py-10 border-t border-slate-800 mt-auto">
-      <div className="max-w-7xl mx-auto px-4 space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-white font-heading font-bold text-xl">
-              <div className="w-8 h-8 rounded-xl bg-brand-red flex items-center justify-center text-white text-xs">
-                <IconBag className="w-4 h-4 text-brand-gold" />
-              </div>
-              <span>{config.storeName}</span>
+      <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-brand-red flex items-center justify-center text-white font-heading font-black text-sm">
+              P&R
             </div>
-            <p className="text-brand-gold font-semibold italic text-xs">{config.storeSub}</p>
+            <span className="font-heading font-black text-white text-base">{config.storeName}</span>
           </div>
-          <div>
-            <h4 className="font-heading font-bold text-white mb-2">{config.storeName}</h4>
-            <p className="text-slate-400">
-              • Productos de Calidad
-              <br />• Precios Justos
-              <br />• Variedad para tu Hogar
-            </p>
-          </div>
-          <div>
-            <h4 className="font-heading font-bold text-white mb-2">Envíos</h4>
-            <p className="text-slate-400">
-              • Pago Contra Entrega en Lima
-              <br />• Envíos a Provincia por Shalom/Olva
-            </p>
-          </div>
-          <div>
-            <h4 className="font-heading font-bold text-white mb-2">Atención</h4>
-            <p className="text-brand-gold font-bold flex items-center gap-1.5">
-              <IconWhatsapp className="w-4 h-4" /> +{config.whatsappNumber}
-            </p>
-            <Link href="/login" className="text-[11px] text-slate-400 mt-1 hover:text-white transition inline-block">
-              🔑 Acceso al Sistema (Intranet)
-            </Link>
-          </div>
+          <p className="text-slate-400 text-xs leading-relaxed">{config.storeSub}</p>
         </div>
-        <div className="pt-4 border-t border-slate-800 text-center text-slate-500 text-[11px]">
-          &copy; {new Date().getFullYear()} {config.storeName}. Todos los derechos reservados.
+
+        <div>
+          <h4 className="font-heading font-bold text-white mb-3 text-xs uppercase tracking-wider">P&R Store</h4>
+          <ul className="space-y-2 text-slate-400">
+            <li>• Productos de Calidad</li>
+            <li>• Precios Justos</li>
+            <li>• Variedad para tu Hogar</li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 className="font-heading font-bold text-white mb-3 text-xs uppercase tracking-wider">Envíos</h4>
+          <ul className="space-y-2 text-slate-400">
+            <li>• Pago Contra Entrega en Lima</li>
+            <li>• Envíos a Provincia por Shalom/Olva</li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 className="font-heading font-bold text-white mb-3 text-xs uppercase tracking-wider">Atención</h4>
+          <ul className="space-y-2 text-slate-400">
+            <li className="flex items-center gap-1.5 font-bold text-emerald-400">
+              <IconWhatsapp className="w-4 h-4" /> +{config.whatsappNumber}
+            </li>
+            <li>
+              <Link href="/login" className="hover:text-white transition flex items-center gap-1 mt-1">
+                <IconKey className="w-3.5 h-3.5 text-brand-red" /> Acceso al Sistema (Intranet)
+              </Link>
+            </li>
+          </ul>
         </div>
       </div>
     </footer>
@@ -160,10 +161,11 @@ function LiveSalesProofToast() {
   const [visible, setVisible] = useState(false);
 
   const SALES = [
-    { name: 'Valeria M.', district: 'Miraflores', product: 'Vaso Yogurera Yogurt To Go (2 Unids)', time: 'hace 3 min' },
-    { name: 'Carlos R.', district: 'San Borja', product: 'Pack Vaso Yogurera x3', time: 'hace 6 min' },
-    { name: 'Daniela K.', district: 'Surco', product: 'Vaso Yogurera 1 Unidad', time: 'hace 9 min' },
-    { name: 'Miguel A.', district: 'Arequipa', product: 'Vaso Yogurera 2 Unidades', time: 'hace 12 min' },
+    { name: 'Valeria M.', district: 'Miraflores, Lima', product: 'Cortador 12 en 1 (Combo 2u)', time: 'Hace 3 min' },
+    { name: 'Carlos R.', district: 'San Borja, Lima', product: 'Vaso Yogurera (Pack 3u)', time: 'Hace 6 min' },
+    { name: 'Miguel A.', district: 'Arequipa', product: 'DispensaLimpia (Combo 2u)', time: 'Hace 12 min' },
+    { name: 'Ana Sofía P.', district: 'Santiago de Surco', product: 'Vaso Yogurera Portable', time: 'Hace 4 min' },
+    { name: 'Jorge L.', district: 'Trujillo', product: 'Organizador Multiuso Premium', time: 'Hace 8 min' },
   ];
 
   useEffect(() => {
@@ -174,10 +176,10 @@ function LiveSalesProofToast() {
 
       setTimeout(() => {
         setVisible(false);
-      }, 4500);
+      }, 5500);
 
       index = (index + 1) % SALES.length;
-    }, 13000);
+    }, 11000);
 
     return () => clearInterval(interval);
   }, []);
@@ -186,22 +188,29 @@ function LiveSalesProofToast() {
 
   return (
     <div
-      className={`fixed bottom-20 left-4 bg-white/95 backdrop-blur-md border border-brand-red/30 p-3 rounded-2xl shadow-2xl z-40 max-w-xs transition-all duration-500 transform ${
-        visible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0 pointer-events-none'
+      className={`fixed bottom-24 left-4 sm:left-6 bg-slate-900 text-white border-2 border-amber-400/80 p-4 rounded-3xl shadow-2xl z-40 max-w-sm transition-all duration-500 transform ${
+        visible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-6 opacity-0 scale-95 pointer-events-none'
       }`}
     >
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full bg-red-100 text-brand-red font-heading font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
+      <div className="flex items-center gap-3.5">
+        <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-red-600 to-amber-500 text-white font-black text-lg flex items-center justify-center shrink-0 shadow-md">
           🛍️
         </div>
-        <div className="text-[11px] leading-tight">
-          <p className="font-bold text-slate-900">
-            <span className="text-brand-red">{activeToast.name}</span> de {activeToast.district}
+        <div className="text-xs leading-tight space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="bg-emerald-500/20 border border-emerald-400 text-emerald-300 text-[9px] font-black uppercase px-2 py-0.5 rounded-full flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+              COMPRA EN VIVO
+            </span>
+            <span className="text-[10px] text-slate-400 font-bold">{activeToast.time}</span>
+          </div>
+
+          <p className="font-heading font-black text-white text-xs">
+            <span className="text-amber-300">{activeToast.name}</span> <span className="text-slate-300 font-normal">de</span> {activeToast.district}
           </p>
-          <p className="text-slate-600">
-            Compró <strong className="text-slate-900">{activeToast.product}</strong>
+          <p className="text-slate-300 text-[11px]">
+            Confirmó <strong className="text-amber-300 font-black underline">{activeToast.product}</strong>
           </p>
-          <p className="text-[9px] text-slate-400 font-semibold mt-0.5"> Verified Purchase • {activeToast.time}</p>
         </div>
       </div>
     </div>

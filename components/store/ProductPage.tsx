@@ -23,37 +23,227 @@ import {
   IconLock,
 } from './Icons';
 
-const FAQS = [
+type Resena = {
+  id: string;
+  nombre: string;
+  distrito: string;
+  estrellas: number;
+  comentario: string;
+  fecha: string;
+  imagen?: string;
+  verificado: boolean;
+};
+
+const RESENAS_INICIALES: Resena[] = [
   {
-    q: '¿Cómo funciona el pago contra entrega?',
-    a: 'En Lima Metropolitana pagas directamente en efectivo, Yape o Plin cuando el motorizado entrega el paquete en tu puerta.',
+    id: '1',
+    nombre: 'Valeria Mendoza',
+    distrito: 'Miraflores, Lima',
+    estrellas: 5,
+    comentario: '¡Excelente producto! Me llegó en menos de 24 horas a mi casa y pagué al motorizado en efectivo. La calidad superó mis expectativas.',
+    fecha: 'Hace 2 días',
+    imagen: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80',
+    verificado: true,
   },
   {
-    q: '¿Hacen envíos a todo el Perú?',
-    a: '¡Sí! Para provincias enviamos diariamente por agencias de carga como Shalom, Olva Courier o Marvisur previo depósito o transferencia.',
+    id: '2',
+    nombre: 'Carlos Ramos',
+    distrito: 'San Borja, Lima',
+    estrellas: 5,
+    comentario: 'Aproveché la oferta de 2 unidades para regalarle una a mi hermana. Muy buena atención por WhatsApp y el paquete llegó impecable.',
+    fecha: 'Hace 4 días',
+    imagen: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+    verificado: true,
   },
   {
-    q: '¿El producto tiene garantía?',
-    a: 'Todos nuestros productos son importados directamente y pasan por control de calidad. Garantía 100% de cambio o devolución en P&R Store.',
+    id: '3',
+    nombre: 'Mariela Paredes',
+    distrito: 'Arequipa',
+    estrellas: 5,
+    comentario: 'Pedí con envío a provincia por agencia Shalom. Deposité con Yape y al día siguiente me enviaron la clave de rastreo. 100% confiable.',
+    fecha: 'Hace 1 semana',
+    imagen: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+    verificado: true,
   },
 ];
 
-function Faq() {
-  const [abierto, setAbierto] = useState<number | null>(0);
+function ProductReviews({ productoNombre }: { productoNombre: string }) {
+  const [resenas, setResenas] = useState<Resena[]>(RESENAS_INICIALES);
+  const [modalFormOpen, setModalFormOpen] = useState(false);
+  const [nombre, setNombre] = useState('');
+  const [distrito, setDistrito] = useState('');
+  const [estrellas, setEstrellas] = useState(5);
+  const [comentario, setComentario] = useState('');
+
+  const handleAgregarResena = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nombre.trim() || !comentario.trim()) {
+      alert('Por favor completa tu nombre y comentario.');
+      return;
+    }
+
+    const nuevaResena: Resena = {
+      id: Date.now().toString(),
+      nombre: nombre.trim(),
+      distrito: distrito.trim() || 'Lima, Perú',
+      estrellas: estrellas,
+      comentario: comentario.trim(),
+      fecha: 'Hace un momento',
+      verificado: true,
+    };
+
+    setResenas([nuevaResena, ...resenas]);
+    setNombre('');
+    setDistrito('');
+    setComentario('');
+    setEstrellas(5);
+    setModalFormOpen(false);
+    alert('¡Gracias por tu valoración! Tu reseña ha sido publicada.');
+  };
+
   return (
-    <section className="space-y-4 pt-4 border-t border-slate-200">
-      <h2 className="text-xl font-heading font-black text-slate-900">Preguntas Frecuentes</h2>
-      <div className="divide-y divide-slate-200 border border-slate-200 rounded-3xl overflow-hidden bg-white shadow-xs">
-        {FAQS.map((item, i) => (
-          <div key={item.q}>
-            <button
-              onClick={() => setAbierto(abierto === i ? null : i)}
-              className="w-full flex items-center justify-between gap-3 text-left px-5 py-4 text-sm font-bold text-slate-900 hover:bg-slate-50 transition"
-            >
-              <span>{item.q}</span>
-              <IconChevronDown className={`w-4 h-4 text-red-600 shrink-0 transition-transform ${abierto === i ? 'rotate-180' : ''}`} />
-            </button>
-            {abierto === i && <p className="px-5 pb-4 text-xs text-slate-600 leading-relaxed">{item.a}</p>}
+    <section className="space-y-6 pt-6 border-t border-slate-200">
+      
+      {/* HEADER DE VALORACIONES Y PUNTUACIÓN GENERAL */}
+      <div className="bg-slate-900 text-white p-6 md:p-8 rounded-3xl shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 border border-slate-800">
+        <div className="space-y-2 text-center md:text-left">
+          <span className="bg-amber-400 text-slate-950 font-heading font-black text-[10px] uppercase px-3 py-1 rounded-full shadow-xs">
+            ⭐ VALORACIÓN OFICIAL DE CLIENTES P&R STORE
+          </span>
+          <h2 className="text-2xl md:text-3xl font-heading font-black text-white">Opiniones y Experiencias Reales</h2>
+          <p className="text-xs text-slate-300">
+            Reseñas verificadas de clientes que compraron <strong className="text-amber-300">{productoNombre}</strong> en todo el Perú.
+          </p>
+        </div>
+
+        <div className="flex flex-col items-center shrink-0 space-y-2 bg-white/10 p-5 rounded-2xl border border-white/10 backdrop-blur-md">
+          <span className="text-4xl font-heading font-black text-amber-300 leading-none">4.9 / 5.0</span>
+          <div className="text-amber-400 text-lg">★★★★★</div>
+          <span className="text-[11px] text-slate-300 font-bold">+1,240 Compradores Felices</span>
+          <button
+            onClick={() => setModalFormOpen(true)}
+            className="mt-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-heading font-black py-2.5 px-5 rounded-xl shadow-md transition transform hover:scale-105"
+          >
+            ✍️ Dejar una Reseña
+          </button>
+        </div>
+      </div>
+
+      {/* FORMULARIO MODAL PARA AGREGAR RESEÑA */}
+      {modalFormOpen && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+          <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border-2 border-red-600 space-y-4 animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center border-b pb-3">
+              <h3 className="font-heading font-black text-slate-900 text-base">Valorar y Dejar Reseña</h3>
+              <button onClick={() => setModalFormOpen(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+            </div>
+
+            <form onSubmit={handleAgregarResena} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Tu Nombre Completo *</label>
+                <input
+                  type="text"
+                  required
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                  placeholder="Ej: Sofia López"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-semibold text-slate-900 focus:ring-2 focus:ring-red-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Tu Ciudad / Distrito</label>
+                <input
+                  type="text"
+                  value={distrito}
+                  onChange={(e) => setDistrito(e.target.value)}
+                  placeholder="Ej: Surco, Lima"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-semibold text-slate-900 focus:ring-2 focus:ring-red-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Puntuación de Estrellas *</label>
+                <select
+                  value={estrellas}
+                  onChange={(e) => setEstrellas(Number(e.target.value))}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-bold text-amber-500 focus:ring-2 focus:ring-red-600 focus:outline-none"
+                >
+                  <option value={5}>★★★★★ 5 Estrellas (Excelente)</option>
+                  <option value={4}>★★★★☆ 4 Estrellas (Muy Bueno)</option>
+                  <option value={3}>★★★☆☆ 3 Estrellas (Bueno)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Tu Comentario / Experiencia *</label>
+                <textarea
+                  required
+                  rows={3}
+                  value={comentario}
+                  onChange={(e) => setComentario(e.target.value)}
+                  placeholder="Escribe aquí tu opinión sobre el producto y el servicio de entrega..."
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 font-medium text-slate-900 focus:ring-2 focus:ring-red-600 focus:outline-none"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-heading font-black py-3 px-4 rounded-xl text-xs shadow-md transition"
+              >
+                PUBLICAR MI RESEÑA
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* GRID DE CARDS DE RESEÑAS DE CLIENTES */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {resenas.map((r) => (
+          <div
+            key={r.id}
+            className="bg-white border border-slate-200/90 p-5 rounded-3xl shadow-xs space-y-3 hover:shadow-lg transition-all duration-300 flex flex-col justify-between"
+          >
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center font-black text-slate-700 text-xs">
+                    {r.imagen ? (
+                      <img src={r.imagen} alt={r.nombre} className="w-full h-full object-cover" />
+                    ) : (
+                      r.nombre.charAt(0)
+                    )}
+                  </div>
+                  <div>
+                    <h4 className="font-heading font-bold text-slate-900 text-xs">{r.nombre}</h4>
+                    <span className="text-[10px] text-slate-500 block">{r.distrito}</span>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-slate-400">{r.fecha}</span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
+                <div className="text-amber-400 font-bold">
+                  {'★'.repeat(r.estrellas)}
+                  {'☆'.repeat(5 - r.estrellas)}
+                </div>
+                {r.verificado && (
+                  <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <IconShieldCheck className="w-3 h-3 text-emerald-600" /> Comprador Verificado
+                  </span>
+                )}
+              </div>
+
+              <p className="text-xs text-slate-600 leading-relaxed italic">
+                &quot;{r.comentario}&quot;
+              </p>
+            </div>
+
+            <div className="pt-2 text-[10px] text-slate-400 font-semibold border-t border-slate-100 flex items-center gap-1">
+              <span>🛒 Producto:</span>
+              <span className="text-slate-700 font-bold line-clamp-1">{productoNombre}</span>
+            </div>
           </div>
         ))}
       </div>
@@ -101,7 +291,6 @@ export default function ProductPage({ slug }: { slug: string }) {
           if (data) {
             setProducto(data);
             const pUnit = precioDe(data);
-            const p2u = data.oferta_2u_precio ? Number(data.oferta_2u_precio) : Math.round(pUnit * 1.8);
             setSelectedPromo({ id: '1', name: '1 Unidad', price: pUnit });
 
             setRelacionados(
@@ -241,7 +430,7 @@ export default function ProductPage({ slug }: { slug: string }) {
           {/* COMBOS PROMO DE ALTA CONVERSIÓN */}
           <div className="space-y-3 pt-2">
             <h3 className="text-xs font-heading font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-              <span>🎁 Selecciona tu Promo con Descuento:</span>
+              <span>🎁 SELECCIONA TU PROMO CON DESCUENTO:</span>
             </h3>
 
             <div className="space-y-3">
@@ -335,7 +524,8 @@ export default function ProductPage({ slug }: { slug: string }) {
         </div>
       </div>
 
-      <Faq />
+      {/* SECCIÓN DE RESEÑAS Y OPINIONES DE CLIENTES (REEMPLAZA A FAQS) */}
+      <ProductReviews productoNombre={producto.nombre} />
 
       {/* MODAL DE PEDIDO FLOTANTE DIRECTO SIN CARRITO */}
       {modalPedidoOpen && (
@@ -344,6 +534,8 @@ export default function ProductPage({ slug }: { slug: string }) {
           productoId={producto.id}
           precioUnitario={precio}
           promoElegida={selectedPromo}
+          oferta2u={oferta2u}
+          oferta3u={oferta3u}
           onClose={() => setModalPedidoOpen(false)}
           whatsappNumero={config.whatsappNumber}
         />

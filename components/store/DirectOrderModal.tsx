@@ -8,6 +8,8 @@ type Props = {
   productoId: number | string;
   precioUnitario: number;
   promoElegida: { id: string; name: string; price: number };
+  oferta2u?: number;
+  oferta3u?: number;
   onClose: () => void;
   whatsappNumero?: string;
   umbralEnvioGratis?: number;
@@ -19,23 +21,39 @@ export default function DirectOrderModal({
   productoId,
   precioUnitario,
   promoElegida,
+  oferta2u,
+  oferta3u,
   onClose,
   whatsappNumero = '51992001002',
   umbralEnvioGratis = 30,
   costoEnvioFijo = 15,
 }: Props) {
+  // Opciones de combo disponibles para cambio directo dentro del modal
+  const p2u = oferta2u || Math.round(precioUnitario * 1.8);
+  const p3u = oferta3u || Math.round(precioUnitario * 2.4);
+
+  const [currentPromo, setCurrentPromo] = useState(promoElegida);
   const [nombre, setNombre] = useState('');
   const [celular, setCelular] = useState('');
   const [distrito, setDistrito] = useState('');
   const [direccion, setDireccion] = useState('');
   const [referencia, setReferencia] = useState('');
-  const [metodoPago, setMetodoPago] = useState('Pago Contra Entrega (Efectivo / Yape / Plin)');
   const [enviando, setEnviando] = useState(false);
 
-  // Cálculo de envío según regla dinámica (Gratis >= S/. 30.00, S/. 15.00 si es <= S/. 29.99)
-  const esEnvioGratis = promoElegida.price >= umbralEnvioGratis;
+  // Cálculo de costo de envío
+  const esEnvioGratis = currentPromo.price >= umbralEnvioGratis;
   const costoEnvio = esEnvioGratis ? 0 : costoEnvioFijo;
-  const totalFinal = promoElegida.price + costoEnvio;
+  const totalFinal = currentPromo.price + costoEnvio;
+
+  const handleComboChange = (comboId: string) => {
+    if (comboId === '1') {
+      setCurrentPromo({ id: '1', name: '1 Unidad', price: precioUnitario });
+    } else if (comboId === '2') {
+      setCurrentPromo({ id: '2', name: '2 Unidades (Más Vendido)', price: p2u });
+    } else if (comboId === '3') {
+      setCurrentPromo({ id: '3', name: '3 Unidades (Pack Familiar)', price: p3u });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,10 +64,9 @@ export default function DirectOrderModal({
     }
 
     setEnviando(true);
-
     const isLima = distrito.toLowerCase().includes('lima') || !distrito.toLowerCase().includes('provincia');
 
-    // 1. Registrar automáticamente en el sistema integral ERP (PostgreSQL)
+    // 1. Guardar en PostgreSQL ERP
     try {
       await fetch(`${API_URL}/api/pedidos`, {
         method: 'POST',
@@ -63,18 +80,18 @@ export default function DirectOrderModal({
           total: totalFinal,
           costo_envio: costoEnvio,
           origen: 'landing_producto',
-          metodo_pago: metodoPago,
+          metodo_pago: 'Pago Contra Entrega (Pagar al Recibir)',
           items: [
             {
               producto_id: productoId,
-              cantidad: parseInt(promoElegida.id) || 1,
-              precio_unitario: promoElegida.price / (parseInt(promoElegida.id) || 1),
+              cantidad: parseInt(currentPromo.id) || 1,
+              precio_unitario: currentPromo.price / (parseInt(currentPromo.id) || 1),
             },
           ],
         }),
       });
     } catch (err) {
-      console.warn('⚠️ No se pudo conectar al backend API, redirigiendo a WhatsApp:', err);
+      console.warn('⚠️ Error al registrar en backend, abriendo WhatsApp:', err);
     }
 
     // 2. Disparar Meta Pixel Events
@@ -93,13 +110,13 @@ export default function DirectOrderModal({
       } catch (e) {}
     }
 
-    // 3. Redirigir al cliente a WhatsApp con datos completos del pedido
+    // 3. Redirigir directamente al WhatsApp de la empresa
     const msg = `🛒 *NUEVO PEDIDO DIRECTO - P&R STORE*
 ----------------------------------------
 📦 *Producto:* ${productoNombre}
-🎁 *Combo Elegido:* ${promoElegida.name} (S/. ${promoElegida.price.toFixed(2)})
+🎁 *Combo:* ${currentPromo.name} (S/. ${currentPromo.price.toFixed(2)})
 🚚 *Envío:* ${esEnvioGratis ? '¡GRATIS! 🎉' : `S/. ${costoEnvio.toFixed(2)}`}
-💰 *TOTAL A PAGAR:* S/. ${totalFinal.toFixed(2)}
+💰 *TOTAL A PAGAR (Pagar al Recibir):* S/. ${totalFinal.toFixed(2)}
 
 👤 *DATOS DEL CLIENTE:*
 • *Nombre:* ${nombre.trim()}
@@ -107,7 +124,7 @@ export default function DirectOrderModal({
 • *Distrito/Ciudad:* ${distrito.trim()}
 • *Dirección Exacta:* ${direccion.trim()}
 • *Referencia:* ${referencia.trim() || 'Sin referencia'}
-💳 *Método de Pago:* ${metodoPago}
+💳 *Método de Pago:* Pago Contra Entrega (Pagas al recibir en puerta)
 
 ----------------------------------------
 🚚 *Por favor confirmar horario de entrega.*`;
@@ -122,16 +139,16 @@ export default function DirectOrderModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border-2 border-red-600 overflow-hidden relative max-h-[90vh] flex flex-col my-auto animate-in fade-in zoom-in duration-200">
+    <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border-2 border-red-600 overflow-hidden relative max-h-[92vh] flex flex-col my-auto animate-in fade-in zoom-in duration-200">
         
         {/* Header Modal */}
-        <div className="bg-gradient-to-r from-red-700 to-red-600 text-white p-5 flex justify-between items-center shadow-md shrink-0">
+        <div className="bg-gradient-to-r from-red-700 to-red-600 text-white p-4 md:p-5 flex justify-between items-center shadow-md shrink-0">
           <div>
             <span className="bg-white/20 text-white text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full tracking-wider">
               🚚 ENVÍO CONTRA ENTREGA EN LIMA
             </span>
-            <h3 className="text-lg md:text-xl font-heading font-black text-white mt-1">FORMULARIO DE PEDIDO RÁPIDO</h3>
+            <h3 className="text-lg md:text-xl font-heading font-black text-white mt-0.5">FORMULARIO DE PEDIDO RÁPIDO</h3>
           </div>
           <button
             onClick={onClose}
@@ -144,34 +161,54 @@ export default function DirectOrderModal({
         {/* Body Form */}
         <form onSubmit={handleSubmit} className="p-5 md:p-6 overflow-y-auto space-y-4 text-xs">
           
-          {/* Resumen Producto y Desglose de Envío */}
-          <div className="bg-slate-900 text-white p-4 rounded-2xl space-y-2 shadow-xs">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+          {/* RESUMEN EDITABLE DEL PRODUCTO Y COMBO */}
+          <div className="bg-slate-950 text-white p-4 rounded-2xl space-y-3 shadow-md border border-slate-800">
+            <div className="flex justify-between items-start">
               <div>
-                <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block">Producto Seleccionado:</span>
-                <span className="font-heading font-black text-xs block text-white line-clamp-1">{productoNombre}</span>
-                <span className="text-[11px] text-slate-300 font-semibold">{promoElegida.name}</span>
+                <span className="text-[10px] text-amber-400 font-black uppercase tracking-wider block">PRODUCTO SELECCIONADO:</span>
+                <h4 className="font-heading font-black text-xs text-white line-clamp-1 mt-0.5">{productoNombre}</h4>
               </div>
-              <span className="text-base font-heading font-black text-white">S/. {promoElegida.price.toFixed(2)}</span>
             </div>
 
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-300 font-semibold">Costo de Envío:</span>
-              <span className={`font-black ${esEnvioGratis ? 'text-emerald-400' : 'text-amber-300'}`}>
-                {esEnvioGratis ? '¡ENVÍO GRATIS! 🎉' : `S/. ${costoEnvio.toFixed(2)}`}
-              </span>
+            {/* SELECTOR EDITABLE DE CANTIDAD/PROMO DENTRO DEL MODAL */}
+            <div>
+              <label className="block text-[10px] text-slate-300 font-bold uppercase mb-1">
+                ✏️ Cambiar Promoción / Cantidad:
+              </label>
+              <select
+                value={currentPromo.id}
+                onChange={(e) => handleComboChange(e.target.value)}
+                className="w-full bg-slate-900 border border-amber-400/50 text-amber-300 font-heading font-bold text-xs rounded-xl p-2.5 focus:ring-2 focus:ring-amber-400 focus:outline-none"
+              >
+                <option value="1">1 Unidad - S/. {precioUnitario.toFixed(2)}</option>
+                <option value="2">2 Unidades (Más Vendido) - S/. {p2u.toFixed(2)}</option>
+                <option value="3">3 Unidades (Pack Familiar) - S/. {p3u.toFixed(2)}</option>
+              </select>
             </div>
 
-            <div className="flex justify-between items-center pt-2 border-t border-slate-700 text-sm">
-              <span className="font-black text-white uppercase">TOTAL A PAGAR:</span>
-              <span className="text-xl font-heading font-black text-amber-300">S/. {totalFinal.toFixed(2)}</span>
+            {/* DESGLOSE DE COSTOS */}
+            <div className="space-y-1 pt-2 border-t border-slate-800 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-300">Subtotal Combo:</span>
+                <span className="font-bold text-white">S/. {currentPromo.price.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-300">Costo de Envío:</span>
+                <span className={`font-black ${esEnvioGratis ? 'text-emerald-400' : 'text-amber-300'}`}>
+                  {esEnvioGratis ? '¡ENVÍO GRATIS! 🎉' : `S/. ${costoEnvio.toFixed(2)}`}
+                </span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-slate-800 text-sm">
+                <span className="font-black text-white uppercase">TOTAL A PAGAR:</span>
+                <span className="text-2xl font-heading font-black text-amber-300">S/. {totalFinal.toFixed(2)}</span>
+              </div>
             </div>
           </div>
 
-          {/* Datos del Cliente */}
+          {/* INGRESA TUS DATOS DE ENVÍO */}
           <div className="space-y-3 pt-1">
-            <label className="block text-xs font-heading font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
-              <span className="w-5 h-5 rounded-full bg-red-600 text-white text-xs flex items-center justify-center font-black">1</span>
+            <label className="block text-xs font-heading font-black text-slate-900 uppercase tracking-wide flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-red-600 text-white text-xs flex items-center justify-center font-black">1</span>
               <span>Ingresa tus datos de envío:</span>
             </label>
 
@@ -184,7 +221,7 @@ export default function DirectOrderModal({
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
                   placeholder="Ej: Maria García"
-                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-2.5 focus:ring-2 focus:ring-red-600 focus:outline-none"
+                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-3 focus:ring-2 focus:ring-red-600 focus:outline-none"
                 />
               </div>
 
@@ -197,7 +234,7 @@ export default function DirectOrderModal({
                     value={celular}
                     onChange={(e) => setCelular(e.target.value)}
                     placeholder="Ej: 987654321"
-                    className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-2.5 focus:ring-2 focus:ring-red-600 focus:outline-none"
+                    className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-3 focus:ring-2 focus:ring-red-600 focus:outline-none"
                   />
                 </div>
                 <div>
@@ -208,7 +245,7 @@ export default function DirectOrderModal({
                     value={distrito}
                     onChange={(e) => setDistrito(e.target.value)}
                     placeholder="Ej: Miraflores, Lima"
-                    className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-2.5 focus:ring-2 focus:ring-red-600 focus:outline-none"
+                    className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-3 focus:ring-2 focus:ring-red-600 focus:outline-none"
                   />
                 </div>
               </div>
@@ -221,7 +258,7 @@ export default function DirectOrderModal({
                   value={direccion}
                   onChange={(e) => setDireccion(e.target.value)}
                   placeholder="Ej: Av. Larco 1234, Dpto 302"
-                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-2.5 focus:ring-2 focus:ring-red-600 focus:outline-none"
+                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-3 focus:ring-2 focus:ring-red-600 focus:outline-none"
                 />
               </div>
 
@@ -232,59 +269,19 @@ export default function DirectOrderModal({
                   value={referencia}
                   onChange={(e) => setReferencia(e.target.value)}
                   placeholder="Ej: Frente al parque principal"
-                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-2.5 focus:ring-2 focus:ring-red-600 focus:outline-none"
+                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-3 focus:ring-2 focus:ring-red-600 focus:outline-none"
                 />
               </div>
             </div>
           </div>
 
-          {/* Método de Pago */}
-          <div className="space-y-2 pt-2 border-t border-slate-100">
-            <label className="block text-xs font-heading font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
-              <span className="w-5 h-5 rounded-full bg-red-600 text-white text-xs flex items-center justify-center font-black">2</span>
-              <span>Método de Pago:</span>
-            </label>
-
-            <div className="space-y-1.5">
-              <label className="flex items-center gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100">
-                <input
-                  type="radio"
-                  name="payment_method"
-                  value="Pago Contra Entrega (Efectivo / Yape / Plin)"
-                  checked={metodoPago.includes('Contra Entrega')}
-                  onChange={(e) => setMetodoPago(e.target.value)}
-                  className="text-red-600 focus:ring-red-600"
-                />
-                <div>
-                  <span className="font-bold text-slate-900 text-xs block">Pago Contra Entrega (Lima)</span>
-                  <span className="text-[10px] text-slate-500">Pagas en efectivo, Yape o Plin al recibir tu paquete</span>
-                </div>
-              </label>
-
-              <label className="flex items-center gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100">
-                <input
-                  type="radio"
-                  name="payment_method"
-                  value="Previo Deposito / Agencia (Provincias)"
-                  checked={metodoPago.includes('Depósito')}
-                  onChange={(e) => setMetodoPago(e.target.value)}
-                  className="text-red-600 focus:ring-red-600"
-                />
-                <div>
-                  <span className="font-bold text-slate-900 text-xs block">Envío a Provincia (Shalom / Olva)</span>
-                  <span className="text-[10px] text-slate-500">Despacho con agencia previo depósito</span>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          {/* Botón Confirmar Pedido (Sin la palabra registrar) */}
+          {/* BOTÓN VERDE ÚNICO: CONFIRMAR PEDIDO (PAGAR AL RECIBIR) */}
           <button
             type="submit"
             disabled={enviando}
             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-heading font-black py-4 px-4 rounded-2xl text-sm shadow-xl transition flex items-center justify-center gap-2 transform hover:-translate-y-0.5 disabled:opacity-60"
           >
-            <span>{enviando ? 'PROCESANDO PEDIDO...' : '¡CONFIRMAR PEDIDO!'}</span>
+            <span>{enviando ? 'PROCESANDO PEDIDO...' : '¡CONFIRMAR PEDIDO (PAGAR AL RECIBIR)!'}</span>
           </button>
         </form>
       </div>
