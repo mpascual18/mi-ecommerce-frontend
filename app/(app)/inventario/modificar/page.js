@@ -325,6 +325,69 @@ export default function ModificarInventarioPage() {
               )}
             </div>
 
+            {/* MARKETING / LANDING PAGE DEL PRODUCTO */}
+            <div className="border border-dashed border-red-200 p-3 rounded-2xl bg-red-50/40 space-y-3">
+              <label className="block text-xs font-black text-gray-800 uppercase">
+                🎯 Landing Page del Producto (para Meta Ads)
+              </label>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Título Gancho (Hook) — la frase grande que verá el cliente
+                </label>
+                <input
+                  type="text"
+                  name="hook_titulo"
+                  placeholder='Ej: "Deja de botar yogurt en tu mochila"'
+                  value={productoEditando.hook_titulo ?? ''}
+                  onChange={handleInputChange}
+                  className="w-full bg-white border border-gray-300 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Beneficios (uno por línea, se muestran con ✅)
+                </label>
+                <textarea
+                  name="beneficios"
+                  rows={4}
+                  placeholder={'Mantiene todo fresco y separado\nCuchara incluida, no se pierde\nAntiderrame, ideal para la mochila'}
+                  value={productoEditando.beneficios ?? ''}
+                  onChange={handleInputChange}
+                  className="w-full bg-white border border-gray-300 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Imágenes Adicionales (una URL por línea, para la galería)
+                </label>
+                <textarea
+                  name="galeria_urls"
+                  rows={3}
+                  placeholder={'https://...\nhttps://...'}
+                  value={productoEditando.galeria_urls ?? ''}
+                  onChange={handleInputChange}
+                  className="w-full bg-white border border-gray-300 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  GIF de Demostración (URL, opcional — se anima solo en la página)
+                </label>
+                <input
+                  type="url"
+                  name="gif_url"
+                  placeholder="https://.../demo.gif"
+                  value={productoEditando.gif_url ?? ''}
+                  onChange={handleInputChange}
+                  className="w-full bg-white border border-gray-300 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
             <div className="flex justify-between items-center pt-2">
               <Button type="button" variant="danger" onClick={eliminarProducto} loading={eliminando}>
                 Eliminar del Catálogo

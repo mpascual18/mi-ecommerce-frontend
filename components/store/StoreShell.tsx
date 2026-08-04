@@ -298,23 +298,23 @@ function MobileFloatingButton() {
   );
 }
 
-function ShellInner({ children }: { children: ReactNode }) {
+function ShellInner({ children, hideFloatingCart }: { children: ReactNode; hideFloatingCart?: boolean }) {
   return (
     <div className="store-root bg-[#FAFAFA] text-brand-grafito min-h-screen flex flex-col font-sans antialiased">
       <Ticker />
       <Header />
       {children}
       <Footer />
-      <MobileFloatingButton />
+      {!hideFloatingCart && <MobileFloatingButton />}
       <CartDrawer />
     </div>
   );
 }
 
-export default function StoreShell({ children }: { children: ReactNode }) {
+export default function StoreShell({ children, hideFloatingCart }: { children: ReactNode; hideFloatingCart?: boolean }) {
   return (
     <CartProvider>
-      <ShellInner>{children}</ShellInner>
+      <ShellInner hideFloatingCart={hideFloatingCart}>{children}</ShellInner>
     </CartProvider>
   );
 }

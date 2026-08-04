@@ -11,7 +11,26 @@ export type Producto = {
   badge?: string;
   imagen_url?: string;
   descripcion?: string;
+  hook_titulo?: string;
+  beneficios?: string;
+  galeria_urls?: string;
+  gif_url?: string;
 };
+
+/** Convierte el textarea "uno por línea" en un array limpio, sin líneas vacías */
+export function lineasA(texto?: string): string[] {
+  return (texto || '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+}
+
+/** Todas las imágenes de un producto: principal + galería + gif (el gif anima solo por ser <img>) */
+export function galeriaCompleta(p: Producto): string[] {
+  const imgs = [p.imagen_url, ...lineasA(p.galeria_urls)].filter(Boolean) as string[];
+  if (p.gif_url) imgs.push(p.gif_url);
+  return imgs.length > 0 ? imgs : [FALLBACK_IMAGE];
+}
 
 export function precioDe(p: Producto) {
   return Number(p.price_oferta || p.price_soles || 0);

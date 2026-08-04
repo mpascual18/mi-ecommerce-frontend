@@ -4,8 +4,60 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { API_URL } from '@/lib/api';
 import { useCart, soles } from './CartContext';
-import { FALLBACK_IMAGE, Producto, precioDe, precioAnteriorDe, slugify, productoHref } from './constants';
-import { IconChevronLeft, IconBag, IconBolt, IconShieldCheck, IconTruck } from './Icons';
+import { FALLBACK_IMAGE, Producto, precioDe, precioAnteriorDe, productoHref, lineasA, galeriaCompleta } from './constants';
+import {
+  IconChevronLeft,
+  IconBag,
+  IconBolt,
+  IconShieldCheck,
+  IconTruck,
+  IconCheck,
+  IconChevronDown,
+  IconWhatsapp,
+  IconLock,
+} from './Icons';
+
+const FAQS = [
+  {
+    q: '¿Cómo funciona el pago?',
+    a: 'Pago contra entrega en Lima Metropolitana (efectivo, Yape o Plin al recibir). Para envíos a provincia trabajamos con Yape, Plin o depósito previo antes del despacho.',
+  },
+  {
+    q: '¿Cuánto demora el envío?',
+    a: 'En Lima coordinamos la entrega por WhatsApp apenas confirmamos tu pedido. A provincia enviamos por Shalom u Olva Courier.',
+  },
+  {
+    q: '¿Cómo hago mi pedido?',
+    a: 'Agrega el producto al carrito, completa tus datos de contacto y entrega, y un asesor te escribe por WhatsApp para confirmar todo antes de despachar.',
+  },
+  {
+    q: '¿Los productos son de calidad?',
+    a: 'Sí. Seleccionamos e importamos cada producto verificando su calidad antes de ofrecerlo en la tienda.',
+  },
+];
+
+function Faq() {
+  const [abierto, setAbierto] = useState<number | null>(0);
+  return (
+    <section className="space-y-3">
+      <h2 className="text-lg font-heading font-black text-brand-grafito">Preguntas Frecuentes</h2>
+      <div className="divide-y divide-slate-200 border border-slate-200 rounded-2xl overflow-hidden bg-white">
+        {FAQS.map((item, i) => (
+          <div key={item.q}>
+            <button
+              onClick={() => setAbierto(abierto === i ? null : i)}
+              className="w-full flex items-center justify-between gap-3 text-left px-4 py-3.5 text-sm font-bold text-brand-grafito hover:bg-slate-50 transition"
+            >
+              <span>{item.q}</span>
+              <IconChevronDown className={`w-4 h-4 text-brand-red shrink-0 transition-transform ${abierto === i ? 'rotate-180' : ''}`} />
+            </button>
+            {abierto === i && <p className="px-4 pb-4 text-xs text-slate-600 leading-relaxed">{item.a}</p>}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export default function ProductPage({ slug }: { slug: string }) {
   const { addToCart, setCartOpen } = useCart();
@@ -14,16 +66,18 @@ export default function ProductPage({ slug }: { slug: string }) {
   const [cargando, setCargando] = useState(true);
   const [noEncontrado, setNoEncontrado] = useState(false);
   const [qty, setQty] = useState(1);
+  const [imagenActiva, setImagenActiva] = useState(0);
 
   useEffect(() => {
     setCargando(true);
     setNoEncontrado(false);
+    setImagenActiva(0);
     (async () => {
       try {
         const resLista = await fetch(`${API_URL}/api/productos`);
         if (resLista.ok) {
           const lista = await resLista.json();
-          const data = Array.isArray(lista) ? lista.find((p: Producto) => slugify(p.nombre) === slug) : null;
+          const data = Array.isArray(lista) ? lista.find((p: Producto) => productoHref(p) === `/${slug}`) : null;
 
           if (data) {
             setProducto(data);
@@ -63,9 +117,18 @@ export default function ProductPage({ slug }: { slug: string }) {
   const anterior = precioAnteriorDe(producto);
   const descuento = anterior ? Math.round(((anterior - precio) / anterior) * 100) : 0;
   const precioCombo = qty === 1 ? precio : qty === 2 ? precio * 1.8 : precio * 2.4;
+  const beneficios = lineasA(producto.beneficios);
+  const galeria = galeriaCompleta(producto);
+  const titulo = producto.hook_titulo?.trim() || producto.nombre;
+
+  function agregarYAbrir() {
+    if (!producto) return;
+    addToCart({ id: producto.id, title: producto.nombre, price: precioCombo / qty, image: producto.imagen_url || FALLBACK_IMAGE }, qty);
+    setCartOpen(true);
+  }
 
   return (
-    <main className="max-w-6xl mx-auto px-4 py-8 md:py-12 flex-1 w-full space-y-12">
+    <main className="max-w-6xl mx-auto px-4 py-8 md:py-12 flex-1 w-full space-y-14 pb-28 md:pb-14">
       {/* BREADCRUMB */}
       <nav className="flex items-center gap-2 text-xs font-semibold text-slate-500">
         <Link href="/" className="hover:text-brand-red transition">Tienda</Link>
@@ -78,14 +141,29 @@ export default function ProductPage({ slug }: { slug: string }) {
       </nav>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
-        {/* IMAGEN */}
-        <div className="space-y-3">
+        {/* GALERIA */}
+        <div className="space-y-3 md:sticky md:top-24">
           <div className="rounded-3xl overflow-hidden border border-slate-200 bg-slate-100 shadow-xs">
-            <img src={producto.imagen_url || FALLBACK_IMAGE} alt={producto.nombre} className="w-full h-80 md:h-[26rem] object-cover" />
+            <img src={galeria[imagenActiva] || FALLBACK_IMAGE} alt={producto.nombre} className="w-full h-80 md:h-[26rem] object-cover" />
           </div>
+          {galeria.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {galeria.map((url, i) => (
+                <button
+                  key={`${url}-${i}`}
+                  onClick={() => setImagenActiva(i)}
+                  className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition ${
+                    imagenActiva === i ? 'border-brand-red' : 'border-slate-200 opacity-80 hover:opacity-100'
+                  }`}
+                >
+                  <img src={url} alt={`${producto.nombre} vista ${i + 1}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* INFO */}
+        {/* INFO / HOOK */}
         <div className="space-y-5">
           <div className="space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
@@ -95,22 +173,45 @@ export default function ProductPage({ slug }: { slug: string }) {
               {descuento > 0 && <span className="bg-brand-gold text-brand-grafito text-[10px] font-heading font-black px-2.5 py-1 rounded-md">-{descuento}% OFF</span>}
               <span className="text-xs font-bold text-brand-red uppercase tracking-wider">{producto.categoria || 'General'}</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-heading font-black text-brand-grafito leading-tight">{producto.nombre}</h1>
+
+            <h1 className="text-2xl md:text-4xl font-heading font-black text-brand-grafito leading-tight">{titulo}</h1>
+            {producto.hook_titulo?.trim() && <p className="text-sm text-slate-500 font-semibold">{producto.nombre}</p>}
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-3xl font-heading font-black text-brand-red">{soles(precio)}</span>
             {anterior && <span className="text-base text-slate-400 line-through">{soles(anterior)}</span>}
             {typeof producto.stock === 'number' && (
-              <span className="bg-emerald-50 text-emerald-700 text-xs font-bold px-3 py-0.5 rounded-full border border-emerald-200">En Stock ({producto.stock} unids)</span>
+              <span
+                className={`text-xs font-bold px-3 py-0.5 rounded-full border ${
+                  producto.stock > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'
+                }`}
+              >
+                {producto.stock > 0 ? `En Stock (${producto.stock} unids)` : 'Agotado'}
+              </span>
             )}
           </div>
 
+          {/* BENEFICIOS */}
+          {beneficios.length > 0 && (
+            <ul className="space-y-2">
+              {beneficios.map((b, i) => (
+                <li key={i} className="flex items-start gap-2.5 text-sm text-brand-grafito font-medium">
+                  <span className="mt-0.5 w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <IconCheck className="w-3 h-3" />
+                  </span>
+                  {b}
+                </li>
+              ))}
+            </ul>
+          )}
+
           <p className="text-sm text-slate-600 leading-relaxed">{producto.descripcion || 'Producto importado de alta calidad.'}</p>
 
-          <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 border-y border-slate-100 py-3">
+          <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 border-y border-slate-100 py-3 flex-wrap">
             <span className="flex items-center gap-1.5"><IconShieldCheck className="w-4 h-4 text-brand-red" /> Calidad garantizada</span>
             <span className="flex items-center gap-1.5"><IconTruck className="w-4 h-4 text-brand-red" /> Envíos a todo el país</span>
+            <span className="flex items-center gap-1.5"><IconLock className="w-4 h-4 text-brand-red" /> Pago contra entrega</span>
           </div>
 
           <div className="space-y-2">
@@ -126,7 +227,7 @@ export default function ProductPage({ slug }: { slug: string }) {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 pt-1">
+          <div className="hidden md:grid grid-cols-2 gap-3 pt-1">
             <button
               onClick={() => addToCart({ id: producto.id, title: producto.nombre, price: precioCombo / qty, image: producto.imagen_url || FALLBACK_IMAGE }, qty)}
               className="w-full bg-brand-grafito hover:bg-slate-800 text-white font-bold py-3.5 px-4 rounded-2xl text-xs flex items-center justify-center gap-2"
@@ -135,10 +236,7 @@ export default function ProductPage({ slug }: { slug: string }) {
               Agregar al Carrito
             </button>
             <button
-              onClick={() => {
-                addToCart({ id: producto.id, title: producto.nombre, price: precioCombo / qty, image: producto.imagen_url || FALLBACK_IMAGE }, qty);
-                setCartOpen(true);
-              }}
+              onClick={agregarYAbrir}
               className="w-full bg-brand-red hover:bg-brand-darkred text-white font-heading font-extrabold py-3.5 px-4 rounded-2xl text-xs flex items-center justify-center gap-2"
             >
               <IconBolt className="w-4 h-4" />
@@ -151,6 +249,8 @@ export default function ProductPage({ slug }: { slug: string }) {
           </Link>
         </div>
       </div>
+
+      <Faq />
 
       {/* RELACIONADOS */}
       {relacionados.length > 0 && (
@@ -176,6 +276,21 @@ export default function ProductPage({ slug }: { slug: string }) {
           </div>
         </section>
       )}
+
+      {/* BARRA CTA FIJA — SOLO MOBILE */}
+      <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 shadow-2xl p-3 flex items-center gap-3">
+        <div className="shrink-0">
+          <span className="block text-[10px] text-slate-400 font-bold uppercase">Precio</span>
+          <span className="text-lg font-heading font-black text-brand-red leading-none">{soles(precio)}</span>
+        </div>
+        <button
+          onClick={agregarYAbrir}
+          className="flex-1 bg-brand-red hover:bg-brand-darkred text-white font-heading font-extrabold py-3 px-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-md"
+        >
+          <IconWhatsapp className="w-4 h-4" />
+          Comprar Ahora
+        </button>
+      </div>
     </main>
   );
 }
