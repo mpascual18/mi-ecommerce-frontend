@@ -244,7 +244,7 @@ function ProductReviews({ producto }: { producto: Producto }) {
           </span>
           <h2 className="text-2xl md:text-3xl font-heading font-black text-white">Opiniones y Experiencias Reales</h2>
           <p className="text-xs text-slate-300">
-            Reseñas verificadas de clientes que compraron <strong className="text-amber-300">{productoNombre}</strong> en todo el Perú.
+            Reseñas verificadas de clientes que compraron <strong className="text-amber-300">{producto.nombre}</strong> en todo el Perú.
           </p>
         </div>
 
