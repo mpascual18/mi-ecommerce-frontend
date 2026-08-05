@@ -67,13 +67,138 @@ const RESENAS_INICIALES: Resena[] = [
   },
 ];
 
-function ProductReviews({ productoNombre }: { productoNombre: string }) {
-  const [resenas, setResenas] = useState<Resena[]>(RESENAS_INICIALES);
+function generarResenasPorProducto(p: Producto): Resena[] {
+  const nombre = p.nombre || 'Producto P&R Store';
+  const cat = (p.categoria || '').toLowerCase();
+
+  if (cat.includes('cocina')) {
+    return [
+      {
+        id: `p_${p.id}_1`,
+        nombre: 'Valeria Mendoza',
+        distrito: 'Miraflores, Lima',
+        estrellas: 5,
+        comentario: `¡Súper práctico para la cocina! El ${nombre} me ahorra muchísimo tiempo preparando los desayunos y almuerzos de la familia. Me llegó en 24h con pago contra entrega.`,
+        fecha: 'Hace 2 días',
+        imagen: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80',
+        verificado: true,
+      },
+      {
+        id: `p_${p.id}_2`,
+        nombre: 'Carlos Ramos',
+        distrito: 'San Borja, Lima',
+        estrellas: 5,
+        comentario: `Compré 2 unidades del ${nombre} aprovechando el descuento por combo. La calidad del material es A1 y es muy fácil de lavar. 100% recomendado.`,
+        fecha: 'Hace 4 días',
+        imagen: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+        verificado: true,
+      },
+      {
+        id: `p_${p.id}_3`,
+        nombre: 'Mariela Paredes',
+        distrito: 'Arequipa',
+        estrellas: 5,
+        comentario: `Pedí el ${nombre} hasta Arequipa por agencia Shalom. Deposité con Yape y al día siguiente me enviaron la clave de rastreo. 100% confiable.`,
+        fecha: 'Hace 1 semana',
+        imagen: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+        verificado: true,
+      },
+    ];
+  }
+
+  if (cat.includes('hogar') || cat.includes('bienestar')) {
+    return [
+      {
+        id: `p_${p.id}_1`,
+        nombre: 'Patricia Ruiz',
+        distrito: 'Surco, Lima',
+        estrellas: 5,
+        comentario: `Me encantó el ${nombre}, dejó mi casa súper organizada y con excelente presentación. El motorizado fue muy amable y pagué al recibir.`,
+        fecha: 'Hace 1 día',
+        imagen: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80',
+        verificado: true,
+      },
+      {
+        id: `p_${p.id}_2`,
+        nombre: 'Jorge Alarcón',
+        distrito: 'La Molina, Lima',
+        estrellas: 5,
+        comentario: `Excelente compra. El ${nombre} cumple exactamente con lo que muestran en las fotos y videos. Buena relación precio-calidad.`,
+        fecha: 'Hace 3 días',
+        imagen: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80',
+        verificado: true,
+      },
+      {
+        id: `p_${p.id}_3`,
+        nombre: 'Fiorella Castro',
+        distrito: 'Trujillo',
+        estrellas: 5,
+        comentario: `Pedí el ${nombre} por Olva Courier hasta Trujillo. Llegó a tiempo y en perfecto estado. Definitivamente volveré a comprar en P&R Store.`,
+        fecha: 'Hace 5 días',
+        imagen: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80',
+        verificado: true,
+      },
+    ];
+  }
+
+  return [
+    {
+      id: `p_${p.id}_1`,
+      nombre: 'Lucía Fernández',
+      distrito: 'San Isidro, Lima',
+      estrellas: 5,
+      comentario: `¡El ${nombre} es excelente! Superó mis expectativas, llegó rapidísimo a mi casa y pagué en efectivo al recibir.`,
+      fecha: 'Hace 2 días',
+      imagen: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80',
+      verificado: true,
+    },
+    {
+      id: `p_${p.id}_2`,
+      nombre: 'Renzo Morales',
+      distrito: 'Pueblo Libre, Lima',
+      estrellas: 5,
+      comentario: `Compré el ${nombre} por recomendación y funciona de maravilla. Atención 10/10 por WhatsApp.`,
+      fecha: 'Hace 5 días',
+      imagen: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+      verificado: true,
+    },
+    {
+      id: `p_${p.id}_3`,
+      nombre: 'Gisela Vega',
+      distrito: 'Cusco',
+      estrellas: 5,
+      comentario: `Envío súper seguro hasta Cusco por agencia Shalom. El ${nombre} llegó sellado y en perfecto estado.`,
+      fecha: 'Hace 1 semana',
+      imagen: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+      verificado: true,
+    },
+  ];
+}
+
+function ProductReviews({ producto }: { producto: Producto }) {
+  const [resenas, setResenas] = useState<Resena[]>([]);
   const [modalFormOpen, setModalFormOpen] = useState(false);
   const [nombre, setNombre] = useState('');
   const [distrito, setDistrito] = useState('');
   const [estrellas, setEstrellas] = useState(5);
   const [comentario, setComentario] = useState('');
+
+  useEffect(() => {
+    try {
+      const guardadas = localStorage.getItem(`pyr_resenas_${producto.id}`);
+      if (guardadas) {
+        const parsed = JSON.parse(guardadas);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setResenas(parsed);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Error al leer reseñas locales:', e);
+    }
+
+    setResenas(generarResenasPorProducto(producto));
+  }, [producto.id, producto.nombre]);
 
   const handleAgregarResena = (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,7 +217,14 @@ function ProductReviews({ productoNombre }: { productoNombre: string }) {
       verificado: true,
     };
 
-    setResenas([nuevaResena, ...resenas]);
+    const actualizadas = [nuevaResena, ...resenas];
+    setResenas(actualizadas);
+    try {
+      localStorage.setItem(`pyr_resenas_${producto.id}`, JSON.stringify(actualizadas));
+    } catch (e) {
+      console.warn('Error al guardar reseña local:', e);
+    }
+
     setNombre('');
     setDistrito('');
     setComentario('');
@@ -525,7 +657,7 @@ export default function ProductPage({ slug }: { slug: string }) {
       </div>
 
       {/* SECCIÓN DE RESEÑAS Y OPINIONES DE CLIENTES (REEMPLAZA A FAQS) */}
-      <ProductReviews productoNombre={producto.nombre} />
+      <ProductReviews producto={producto} />
 
       {/* MODAL DE PEDIDO FLOTANTE DIRECTO SIN CARRITO */}
       {modalPedidoOpen && (
