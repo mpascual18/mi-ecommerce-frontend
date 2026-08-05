@@ -257,14 +257,76 @@ const PLANTILLA_DESCRIPCION_DEFAULT = `<p style="text-align: center;"><strong>�
     setProductoEditando((prev) => ({ ...prev, descripcion: html }));
   };
 
-  // Ejecuta un comando de formato (negrita, cursiva, tamaño) sobre la selección actual
-  // del editor de descripción y sincroniza el resultado al estado.
+  const [imagenSeleccionada, setImagenSeleccionada] = useState(null);
+
+  // Ejecuta un comando de formato (negrita, cursiva, listas) sobre la selección actual
   const formatearDescripcion = (comando, valor = null) => {
     if (!descripcionRef.current) return;
     descripcionRef.current.focus();
     document.execCommand(comando, false, valor ?? undefined);
     const html = descripcionRef.current.innerHTML;
     setProductoEditando((prev) => ({ ...prev, descripcion: html }));
+  };
+
+  // Ajusta el tamaño de la imagen o GIF seleccionada (25%, 50%, 75%, 100%)
+  const aplicarTamanoImagen = (anchoPorcentaje) => {
+    if (!descripcionRef.current) return;
+    descripcionRef.current.focus();
+
+    if (imagenSeleccionada) {
+      imagenSeleccionada.style.width = `${anchoPorcentaje}%`;
+      imagenSeleccionada.style.maxWidth = '100%';
+      imagenSeleccionada.style.height = 'auto';
+    } else {
+      const imgs = descripcionRef.current.querySelectorAll('img');
+      imgs.forEach((img) => {
+        img.style.width = `${anchoPorcentaje}%`;
+        img.style.maxWidth = '100%';
+        img.style.height = 'auto';
+      });
+    }
+
+    const html = descripcionRef.current.innerHTML;
+    setProductoEditando((prev) => ({ ...prev, descripcion: html }));
+    toast.success(`GIF/Imagen ajustada al ${anchoPorcentaje}% de ancho`);
+  };
+
+  // Ajusta la alineación de la imagen o GIF seleccionada (Izquierda, Centro, Derecha)
+  const aplicarAlineacionImagen = (alineacion) => {
+    if (!descripcionRef.current) return;
+    descripcionRef.current.focus();
+
+    let img = imagenSeleccionada;
+    if (!img) {
+      const imgs = descripcionRef.current.querySelectorAll('img');
+      if (imgs.length > 0) img = imgs[imgs.length - 1];
+    }
+
+    if (img) {
+      img.style.display = 'block';
+      if (alineacion === 'center') {
+        img.style.marginLeft = 'auto';
+        img.style.marginRight = 'auto';
+      } else if (alineacion === 'right') {
+        img.style.marginLeft = 'auto';
+        img.style.marginRight = '0';
+      } else {
+        img.style.marginLeft = '0';
+        img.style.marginRight = 'auto';
+      }
+    }
+
+    const html = descripcionRef.current.innerHTML;
+    setProductoEditando((prev) => ({ ...prev, descripcion: html }));
+    toast.success(`Alineación de GIF/Imagen actualizada`);
+  };
+
+  const handleEditorClick = (e) => {
+    if (e.target && e.target.tagName === 'IMG') {
+      setImagenSeleccionada(e.target);
+    } else {
+      setImagenSeleccionada(null);
+    }
   };
 
   // Inserta una imagen o GIF dentro del texto de la descripción, en la posición del cursor
@@ -278,10 +340,11 @@ const PLANTILLA_DESCRIPCION_DEFAULT = `<p style="text-align: center;"><strong>�
         document.execCommand(
           'insertHTML',
           false,
-          `<img src="${dataUrl}" style="max-width:100%;border-radius:12px;margin:8px 0;display:block;" />`
+          `<img src="${dataUrl}" style="width:50%;max-width:100%;height:auto;border-radius:12px;margin:12px auto;display:block;" />`
         );
         const html = descripcionRef.current.innerHTML;
         setProductoEditando((prev) => ({ ...prev, descripcion: html }));
+        toast.success('GIF/Imagen insertada a tamaño mediano (50%). Puedes ajustarla con los botones de la barra.');
       }
     } catch (error) {
       console.error('Error al insertar imagen en descripción:', error);
@@ -701,8 +764,39 @@ const PLANTILLA_DESCRIPCION_DEFAULT = `<p style="text-align: center;"><strong>�
                     <option value="7">Título</option>
                   </select>
 
-                  {/* BOTONES DE ALINEACIÓN DE PÁRRAFO */}
+                  {/* BOTONES DE LISTAS Y VIÑETAS */}
                   <div className="flex items-center gap-0.5 border-l border-r border-gray-300 px-1 my-0.5">
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => formatearDescripcion('insertUnorderedList')}
+                      className="w-7 h-7 rounded-lg bg-white border border-gray-300 font-bold text-xs hover:bg-gray-100 flex items-center justify-center"
+                      title="Lista con Viñetas (•)"
+                    >
+                      •
+                    </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => formatearDescripcion('insertOrderedList')}
+                      className="w-7 h-7 rounded-lg bg-white border border-gray-300 font-bold text-xs hover:bg-gray-100 flex items-center justify-center"
+                      title="Lista Numerada (1. 2. 3.)"
+                    >
+                      1.
+                    </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => formatearDescripcion('removeFormat')}
+                      className="w-7 h-7 rounded-lg bg-white border border-gray-300 text-xs hover:bg-gray-100 flex items-center justify-center"
+                      title="Quitar Formato / Limpiar Listas"
+                    >
+                      🧹
+                    </button>
+                  </div>
+
+                  {/* BOTONES DE ALINEACIÓN DE PÁRRAFO */}
+                  <div className="flex items-center gap-0.5 border-r border-gray-300 pr-1 my-0.5">
                     <button
                       type="button"
                       onMouseDown={(e) => e.preventDefault()}
@@ -730,15 +824,77 @@ const PLANTILLA_DESCRIPCION_DEFAULT = `<p style="text-align: center;"><strong>�
                     >
                       ➡️
                     </button>
+                  </div>
+
+                  {/* CONTROLES DE TAMAÑO Y ALINEACIÓN DE GIFS E IMÁGENES */}
+                  <div className="flex items-center gap-1 border-r border-gray-300 pr-1.5 my-0.5 bg-red-50/60 p-0.5 rounded-lg border border-red-200">
+                    <span className="text-[10px] font-bold text-red-700 uppercase px-1">GIF/Foto:</span>
                     <button
                       type="button"
                       onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => formatearDescripcion('justifyFull')}
-                      className="w-7 h-7 rounded-lg bg-white hover:bg-gray-200 text-xs font-bold flex items-center justify-center"
-                      title="Justificar Párrafo"
+                      onClick={() => aplicarTamanoImagen(25)}
+                      className="px-1.5 h-6 rounded-md bg-white border border-gray-300 font-bold text-[10px] hover:bg-red-100"
+                      title="Reducir GIF/Imagen a 25%"
                     >
-                      ↕️
+                      25%
                     </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => aplicarTamanoImagen(50)}
+                      className="px-1.5 h-6 rounded-md bg-white border border-gray-300 font-bold text-[10px] hover:bg-red-100"
+                      title="Reducir GIF/Imagen a 50%"
+                    >
+                      50%
+                    </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => aplicarTamanoImagen(75)}
+                      className="px-1.5 h-6 rounded-md bg-white border border-gray-300 font-bold text-[10px] hover:bg-red-100"
+                      title="Ajustar GIF/Imagen a 75%"
+                    >
+                      75%
+                    </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => aplicarTamanoImagen(100)}
+                      className="px-1.5 h-6 rounded-md bg-white border border-gray-300 font-bold text-[10px] hover:bg-red-100"
+                      title="Expandir GIF/Imagen a 100%"
+                    >
+                      100%
+                    </button>
+
+                    <div className="flex items-center gap-0.5 border-l border-red-200 pl-1">
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => aplicarAlineacionImagen('left')}
+                        className="px-1 h-6 rounded-md bg-white border border-gray-300 font-bold text-[10px] hover:bg-red-100"
+                        title="Alinear GIF/Imagen a la Izquierda"
+                      >
+                        Izquierda
+                      </button>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => aplicarAlineacionImagen('center')}
+                        className="px-1 h-6 rounded-md bg-white border border-gray-300 font-bold text-[10px] hover:bg-red-100"
+                        title="Centrar GIF/Imagen"
+                      >
+                        Centro
+                      </button>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => aplicarAlineacionImagen('right')}
+                        className="px-1 h-6 rounded-md bg-white border border-gray-300 font-bold text-[10px] hover:bg-red-100"
+                        title="Alinear GIF/Imagen a la Derecha"
+                      >
+                        Derecha
+                      </button>
+                    </div>
                   </div>
 
                   <button
@@ -748,7 +904,7 @@ const PLANTILLA_DESCRIPCION_DEFAULT = `<p style="text-align: center;"><strong>�
                     className="h-7 px-2 rounded-lg bg-white border border-gray-300 text-[11px] font-bold hover:bg-gray-100 flex items-center gap-1"
                     title="Insertar imagen o GIF"
                   >
-                    🖼️ Imagen/GIF
+                    🖼️ Insertar GIF/Foto
                   </button>
                   <input
                     ref={imagenDescripcionInputRef}
@@ -763,16 +919,43 @@ const PLANTILLA_DESCRIPCION_DEFAULT = `<p style="text-align: center;"><strong>�
                   contentEditable
                   suppressContentEditableWarning
                   onInput={handleDescripcionInput}
-                  data-placeholder="Cuenta qué hace especial a este producto... puedes usar negrita, tamaños, emojis 😍✨ e insertar imágenes o gifs"
-                  className="descripcion-editor w-full min-h-[120px] max-h-64 overflow-y-auto p-2.5 text-sm focus:outline-none"
+                  onClick={handleEditorClick}
+                  data-placeholder="Cuenta qué hace especial a este producto... puedes usar negrita, listas de viñetas, emojis 😍✨ e insertar imágenes o gifs"
+                  className="descripcion-editor w-full min-h-[140px] max-h-80 overflow-y-auto p-3 text-sm focus:outline-none"
                 />
               </div>
-              <p className="text-[11px] text-gray-400 mt-1">Selecciona texto y usa los botones para darle formato. También puedes insertar imágenes o GIFs en cualquier punto del texto.</p>
+              <p className="text-[11px] text-gray-400 mt-1">
+                💡 Haz clic sobre cualquier GIF o Imagen en el editor y usa los botones <strong>25%, 50%, 75%, 100% y Centro</strong> para ajustar su tamaño y posición al instante.
+              </p>
             </div>
             <style jsx>{`
               .descripcion-editor:empty:before {
                 content: attr(data-placeholder);
                 color: #9ca3af;
+              }
+              .descripcion-editor ul {
+                list-style-type: disc !important;
+                padding-left: 1.75rem !important;
+                margin-top: 0.5rem !important;
+                margin-bottom: 0.5rem !important;
+              }
+              .descripcion-editor ol {
+                list-style-type: decimal !important;
+                padding-left: 1.75rem !important;
+                margin-top: 0.5rem !important;
+                margin-bottom: 0.5rem !important;
+              }
+              .descripcion-editor li {
+                margin-bottom: 0.25rem !important;
+              }
+              .descripcion-editor img {
+                cursor: pointer;
+                transition: all 0.2s ease;
+                border: 2px dashed #cbd5e1;
+              }
+              .descripcion-editor img:hover, .descripcion-editor img:focus {
+                border-color: #ef4444;
+                outline: 2px solid #ef4444;
               }
             `}</style>
 

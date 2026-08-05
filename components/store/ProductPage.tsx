@@ -421,7 +421,7 @@ export default function ProductPage({ slug }: { slug: string }) {
           </div>
 
           <div
-            className="text-sm text-slate-600 leading-relaxed [&_p]:mb-2.5 [&_img]:rounded-xl [&_img]:max-w-full [&_img]:my-2"
+            className="text-sm text-slate-600 leading-relaxed [&_p]:mb-2.5 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-3 [&_li]:mb-1.5 [&_img]:rounded-xl [&_img]:max-w-full [&_img]:h-auto [&_img]:my-3"
             dangerouslySetInnerHTML={{
               __html: producto.descripcion ? sanearDescripcionHtml(producto.descripcion) : 'Producto importado de alta calidad.',
             }}
