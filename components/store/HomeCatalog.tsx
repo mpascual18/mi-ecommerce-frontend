@@ -8,6 +8,12 @@ import { useCart, soles } from './CartContext';
 import { FALLBACK_IMAGE, Producto, precioDe, precioAnteriorDe, productoHref } from './constants';
 import { IconShieldCheck, IconTag, IconHome, IconLock, IconTruck, IconHeadset, IconPackageSearch, IconWhatsapp } from './Icons';
 
+function textoLimpio(html?: string) {
+  if (!html) return '';
+  const sinTags = html.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
+  return sinTags;
+}
+
 const TRUST_ITEMS = [
   { Icon: IconTruck, label: 'Pago Contra Entrega', desc: 'Pagas en efectivo, Yape o Plin al recibir en Lima' },
   { Icon: IconShieldCheck, label: 'Garantía 100% P&R', desc: 'Calidad comprobada e importación directa' },
@@ -209,34 +215,46 @@ export default function HomeCatalog() {
           {/* TARJETA PRODUCTO DESTACADO (DERECHA) */}
           {productoDestacado && (
             <div className="lg:col-span-5">
-              <div className="relative bg-white/10 backdrop-blur-xl border-2 border-amber-400/40 p-6 rounded-3xl shadow-2xl space-y-4 hover:border-amber-400 transition duration-300">
+              <div className="relative bg-white/10 backdrop-blur-xl border-2 border-amber-400/40 p-5 md:p-6 rounded-3xl shadow-2xl space-y-3.5 hover:border-amber-400 transition duration-300">
                 <span className="absolute -top-3.5 left-6 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-heading font-black text-[11px] uppercase tracking-wider px-3.5 py-1 rounded-full shadow-md">
                   ⭐ PRODUCTO DESTACADO DEL DÍA
                 </span>
 
-                <Link href={productoHref(productoDestacado)} className="block group">
-                  <div className="relative w-full h-64 rounded-2xl bg-white/95 overflow-hidden flex items-center justify-center p-4 border border-white/20 shadow-inner">
+                <Link href={productoHref(productoDestacado)} className="block group space-y-3">
+                  {/* CONTENEDOR IMAGEN IMPECABLE SIN SUPERPOSICIONES */}
+                  <div className="relative w-full h-64 sm:h-72 rounded-2xl bg-white overflow-hidden flex items-center justify-center p-3 border border-white/20 shadow-md">
                     <img
                       src={productoDestacado.imagen_url || FALLBACK_IMAGE}
                       alt={productoDestacado.nombre}
                       className="w-full h-full object-contain transform group-hover:scale-105 transition-transform duration-500"
                     />
-                    <span className="absolute bottom-3 right-3 bg-red-600 text-white font-heading font-black text-[11px] px-3 py-1 rounded-full uppercase shadow-md">
-                      PAGO CONTRA ENTREGA
-                    </span>
                   </div>
 
-                  <div className="pt-3 space-y-1">
-                    <h3 className="text-lg font-heading font-black text-white group-hover:text-amber-300 transition line-clamp-1">
+                  {/* BADGES E INDICADORES DE CONFIANZA DEBAJO DE LA IMAGEN */}
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <div className="bg-red-600 text-white font-heading font-black text-[10px] sm:text-[11px] px-3 py-1 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1.5">
+                      <span>🚚 PAGO CONTRA ENTREGA LIMA</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-amber-400 font-bold text-xs">
+                      <span>★★★★★</span>
+                      <span className="text-slate-300 text-[10px] font-semibold">(4.9/5)</span>
+                    </div>
+                  </div>
+
+                  {/* TÍTULO Y DESCRIPCIÓN PERSUASIVA LIMPIA SIN HTML */}
+                  <div className="space-y-1 pt-1">
+                    <h3 className="text-lg md:text-xl font-heading font-black text-white group-hover:text-amber-300 transition line-clamp-1">
                       {productoDestacado.nombre}
                     </h3>
-                    <p className="text-xs text-slate-300 line-clamp-2">{productoDestacado.descripcion}</p>
+                    <p className="text-xs text-slate-200 line-clamp-2 leading-relaxed font-medium">
+                      {textoLimpio(productoDestacado.descripcion) || '⭐ Producto estrella importado con garantía comprobada y despacho express.'}
+                    </p>
                   </div>
                 </Link>
 
                 <div className="flex justify-between items-center pt-3 border-t border-white/10">
                   <div>
-                    <span className="text-3xl font-heading font-black text-amber-300">{soles(precioDe(productoDestacado))}</span>
+                    <span className="text-2xl sm:text-3xl font-heading font-black text-amber-300">{soles(precioDe(productoDestacado))}</span>
                     {precioAnteriorDe(productoDestacado) && (
                       <span className="text-xs text-slate-400 line-through ml-2 font-bold">{soles(precioAnteriorDe(productoDestacado)!)}</span>
                     )}
@@ -244,7 +262,7 @@ export default function HomeCatalog() {
 
                   <Link
                     href={productoHref(productoDestacado)}
-                    className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-heading font-extrabold text-xs px-6 py-3.5 rounded-xl shadow-lg transition"
+                    className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-heading font-black text-xs px-5 py-3 rounded-xl shadow-lg transition transform hover:-translate-y-0.5"
                   >
                     VER DETALLES →
                   </Link>
