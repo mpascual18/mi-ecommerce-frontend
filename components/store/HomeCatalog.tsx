@@ -15,6 +15,27 @@ const TRUST_ITEMS = [
   { Icon: IconHeadset, label: 'Atención 24/7', desc: 'Soporte personalizado directo en WhatsApp' },
 ];
 
+const HERO_SLIDES = [
+  {
+    image: '/images/hero/hero-family.png',
+    tagline: '🔥 TIENDA OFICIAL P&R STORE • LIMA & PROVINCIAS',
+    title: 'Calidad premium que transformará tu hogar',
+    subtitle: 'Importación directa con garantía comprobada. Los productos más innovadores para cocina, hogar y bienestar con envío express y pago contra entrega.',
+  },
+  {
+    image: '/images/hero/hero-delivery.png',
+    tagline: '🚚 PAGO CONTRA ENTREGA EN LIMA & ENVÍOS NACIONALES',
+    title: 'Miles de clientes felices recibiendo sus compras',
+    subtitle: 'Compra con total seguridad. Pagas al recibir en tu puerta en Lima, o despacho express a todo el Perú por Shalom, Olva y Marvisur.',
+  },
+  {
+    image: '/images/hero/hero-kitchen.png',
+    tagline: '⭐ GARANTÍA Y SATISFACCIÓN 100% COMPROBADA',
+    title: 'Productos de importación directa al mejor precio',
+    subtitle: 'Innovación, durabilidad y practicidad para el día a día de tu familia. ¡Haz tu pedido ahora y paga al recibir!',
+  },
+];
+
 export default function HomeCatalog() {
   const { config, addToCart, setCartOpen } = useCart();
   const searchParams = useSearchParams();
@@ -22,6 +43,14 @@ export default function HomeCatalog() {
   const [cargando, setCargando] = useState(true);
   const [categoria, setCategoria] = useState('Todos');
   const [busqueda, setBusqueda] = useState(searchParams.get('q') || '');
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -64,62 +93,96 @@ export default function HomeCatalog() {
   }, [productos, categoria, busqueda]);
 
   const productoDestacado = productos.find((p) => p.badge && p.badge !== 'SIN BADGE') || productos[0];
+  const slideActivo = HERO_SLIDES[currentSlide];
 
   return (
     <>
-      {/* 🌟 HERO SHOWCASE REDISEÑADO CON ESTÉTICA LUXURY DTC 🌟 */}
-      <section className="relative bg-gradient-to-br from-slate-950 via-slate-900 to-red-950 text-white py-14 md:py-20 px-4 shadow-2xl overflow-hidden">
-        {/* Glow light accents */}
-        <div className="absolute -top-24 -left-24 w-96 h-96 bg-red-600/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
+      {/* 🌟 HERO SHOWCASE DINÁMICO CON CARRUSEL DE CLIENTES Y AMBIENTE REAL 🌟 */}
+      <section className="relative bg-slate-950 text-white py-14 md:py-24 px-4 shadow-2xl overflow-hidden min-h-[580px] flex items-center">
+        
+        {/* IMÁGENES DE FONDO DEL CARRUSEL (CROSSFADE TRANSITION) */}
+        {HERO_SLIDES.map((slide, index) => (
+          <div
+            key={slide.image}
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out bg-cover bg-center ${
+              index === currentSlide ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
+            }`}
+            style={{ backgroundImage: `url(${slide.image})` }}
+          />
+        ))}
 
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 items-center relative z-10">
+        {/* OVERLAY GRADIENTE DE ALTO CONTRASTE */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 to-slate-950/65 backdrop-blur-[2px]" />
+        
+        {/* GLOW ACCENTS */}
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-red-600/30 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 items-center relative z-10 w-full">
           
-          {/* TEXTO HERO IZQUIERDO */}
+          {/* TEXTO HERO IZQUIERDO CON TRANSICIÓN */}
           <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-red-500/20 to-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-heading font-black uppercase tracking-widest px-4 py-2 rounded-full backdrop-blur-md shadow-lg">
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-              <span>🔥 TIENDA OFICIAL P&R STORE</span>
-              <span>•</span>
-              <span>LIMA & PROVINCIAS</span>
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-red-500/30 to-amber-500/30 border border-amber-400/50 text-amber-300 text-xs font-heading font-black uppercase tracking-widest px-4 py-2 rounded-full backdrop-blur-md shadow-xl">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+              <span>{slideActivo.tagline}</span>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-heading font-black leading-tight tracking-tight">
-              Calidad premium que <span className="bg-gradient-to-r from-red-400 via-amber-300 to-yellow-200 bg-clip-text text-transparent">transforma tu hogar</span>.
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-heading font-black leading-tight tracking-tight drop-shadow-md">
+              {slideActivo.title.includes('transformará') ? (
+                <>
+                  Calidad premium que <span className="bg-gradient-to-r from-red-400 via-amber-300 to-yellow-200 bg-clip-text text-transparent">transformará tu hogar</span>.
+                </>
+              ) : (
+                slideActivo.title
+              )}
             </h1>
 
-            <p className="text-base md:text-lg text-slate-300 max-w-xl font-normal leading-relaxed mx-auto lg:mx-0">
-              Importación directa con garantía comprobada. Los productos más innovadores para cocina, hogar y bienestar con envío express y pago contra entrega.
+            <p className="text-base md:text-lg text-slate-200 max-w-xl font-medium leading-relaxed mx-auto lg:mx-0 drop-shadow-sm">
+              {slideActivo.subtitle}
             </p>
 
             {/* BOTONES ACCIÓN HERO */}
             <div className="pt-2 flex flex-wrap justify-center lg:justify-start gap-4">
               <a
                 href="#catalogo"
-                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-heading font-extrabold text-sm py-4 px-8 rounded-2xl shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-0.5 flex items-center gap-2.5"
+                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-heading font-black text-sm py-4 px-8 rounded-2xl shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-0.5 flex items-center gap-2.5"
               >
-                <span>⚡ VER CATALOGO DE OFERTAS</span>
+                <span>⚡ VER CATÁLOGO DE OFERTAS</span>
               </a>
               <a
                 href={`https://wa.me/${config.whatsappNumber}?text=Hola%20P%26R%20Store%2C%20quiero%20hacer%20un%20pedido`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-emerald-600/90 hover:bg-emerald-600 text-white font-heading font-extrabold text-sm py-4 px-7 rounded-2xl shadow-xl hover:shadow-2xl transition-all border border-emerald-400/30 flex items-center gap-2.5"
+                className="bg-emerald-600/90 hover:bg-emerald-600 text-white font-heading font-black text-sm py-4 px-7 rounded-2xl shadow-xl hover:shadow-2xl transition-all border border-emerald-400/30 flex items-center gap-2.5"
               >
                 <IconWhatsapp className="w-5 h-5 text-white" />
                 <span>PEDIR POR WHATSAPP</span>
               </a>
             </div>
 
+            {/* CONTROLES / DOTS DEL CARRUSEL */}
+            <div className="pt-4 flex items-center justify-center lg:justify-start gap-2">
+              {HERO_SLIDES.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentSlide(idx)}
+                  className={`h-2.5 rounded-full transition-all duration-300 ${
+                    idx === currentSlide ? 'w-8 bg-amber-400' : 'w-2.5 bg-white/40 hover:bg-white/70'
+                  }`}
+                  title={`Ver imagen ${idx + 1}`}
+                />
+              ))}
+            </div>
+
             {/* BADGES INFERIORES */}
-            <div className="pt-4 flex flex-wrap justify-center lg:justify-start gap-3 text-xs font-bold text-slate-300">
-              <span className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 flex items-center gap-2">
+            <div className="pt-2 flex flex-wrap justify-center lg:justify-start gap-3 text-xs font-bold text-slate-200">
+              <span className="bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-xl border border-white/15 flex items-center gap-2 shadow-sm">
                 <IconTruck className="w-4 h-4 text-amber-400" /> Contra Entrega Lima
               </span>
-              <span className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 flex items-center gap-2">
+              <span className="bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-xl border border-white/15 flex items-center gap-2 shadow-sm">
                 <IconShieldCheck className="w-4 h-4 text-emerald-400" /> Garantía Directa
               </span>
-              <span className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 flex items-center gap-2">
+              <span className="bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-xl border border-white/15 flex items-center gap-2 shadow-sm">
                 <IconTag className="w-4 h-4 text-red-400" /> Precios de Importación
               </span>
             </div>
