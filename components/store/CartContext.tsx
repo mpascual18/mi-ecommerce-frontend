@@ -4,6 +4,14 @@ import { createContext, useContext, useEffect, useMemo, useState, ReactNode } fr
 import { API_URL } from '@/lib/api';
 import { calcularEnvio } from './constants';
 
+export type HeroSlide = {
+  id: string;
+  image: string;
+  tagline: string;
+  title: string;
+  subtitle: string;
+};
+
 export type StoreConfig = {
   whatsappNumber: string;
   storeName: string;
@@ -14,6 +22,9 @@ export type StoreConfig = {
   heroTitle: string;
   heroSubtitle: string;
   heroBannerUrl: string;
+  heroOverlayOpacity?: number;
+  heroOverlayGradient?: string;
+  heroSlides?: HeroSlide[];
 };
 
 export type CartItem = {
@@ -43,6 +54,31 @@ const DEFAULT_CONFIG: StoreConfig = {
   heroTitle: 'Calidad que te acompaña en tu día a día.',
   heroSubtitle: 'En P&R Store seleccionamos lo mejor en tendencias para el hogar, cocina, tecnología y bienestar con garantía comprobada.',
   heroBannerUrl: '',
+  heroOverlayOpacity: 40,
+  heroOverlayGradient: 'slate',
+  heroSlides: [
+    {
+      id: '1',
+      image: '/images/hero/hero-family.png',
+      tagline: '🔥 TIENDA OFICIAL P&R STORE • LIMA & PROVINCIAS',
+      title: 'Calidad premium que transformará tu hogar',
+      subtitle: 'Importación directa con garantía comprobada. Los productos más innovadores para cocina, hogar y bienestar con envío express y pago contra entrega.',
+    },
+    {
+      id: '2',
+      image: '/images/hero/hero-delivery.png',
+      tagline: '🚚 PAGO CONTRA ENTREGA EN LIMA & ENVÍOS NACIONALES',
+      title: 'Miles de clientes felices recibiendo sus compras',
+      subtitle: 'Compra con total seguridad. Pagas al recibir en tu puerta en Lima, o despacho express a todo el Perú por Shalom, Olva y Marvisur.',
+    },
+    {
+      id: '3',
+      image: '/images/hero/hero-kitchen.png',
+      tagline: '⭐ GARANTÍA Y SATISFACCIÓN 100% COMPROBADA',
+      title: 'Productos de importación directa al mejor precio',
+      subtitle: 'Innovación, durabilidad y practicidad para el día a día de tu familia. ¡Haz tu pedido ahora y paga al recibir!',
+    },
+  ],
 };
 
 function soles(n: number) {

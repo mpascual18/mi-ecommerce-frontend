@@ -17,18 +17,21 @@ const TRUST_ITEMS = [
 
 const HERO_SLIDES = [
   {
+    id: '1',
     image: '/images/hero/hero-family.png',
     tagline: '🔥 TIENDA OFICIAL P&R STORE • LIMA & PROVINCIAS',
     title: 'Calidad premium que transformará tu hogar',
     subtitle: 'Importación directa con garantía comprobada. Los productos más innovadores para cocina, hogar y bienestar con envío express y pago contra entrega.',
   },
   {
+    id: '2',
     image: '/images/hero/hero-delivery.png',
     tagline: '🚚 PAGO CONTRA ENTREGA EN LIMA & ENVÍOS NACIONALES',
     title: 'Miles de clientes felices recibiendo sus compras',
     subtitle: 'Compra con total seguridad. Pagas al recibir en tu puerta en Lima, o despacho express a todo el Perú por Shalom, Olva y Marvisur.',
   },
   {
+    id: '3',
     image: '/images/hero/hero-kitchen.png',
     tagline: '⭐ GARANTÍA Y SATISFACCIÓN 100% COMPROBADA',
     title: 'Productos de importación directa al mejor precio',
@@ -93,7 +96,11 @@ export default function HomeCatalog() {
   }, [productos, categoria, busqueda]);
 
   const productoDestacado = productos.find((p) => p.badge && p.badge !== 'SIN BADGE') || productos[0];
-  const slideActivo = HERO_SLIDES[currentSlide];
+  const slides = (config.heroSlides && config.heroSlides.length > 0) ? config.heroSlides : HERO_SLIDES;
+  const slideActivo = slides[currentSlide % slides.length] || slides[0];
+
+  const opacidadCapas = (config.heroOverlayOpacity !== undefined ? config.heroOverlayOpacity : 40) / 100;
+  const estiloDegradado = config.heroOverlayGradient || 'slate';
 
   return (
     <>
@@ -101,18 +108,29 @@ export default function HomeCatalog() {
       <section className="relative bg-slate-950 text-white py-14 md:py-24 px-4 shadow-2xl overflow-hidden min-h-[580px] flex items-center">
         
         {/* IMÁGENES DE FONDO DEL CARRUSEL (CROSSFADE TRANSITION) */}
-        {HERO_SLIDES.map((slide, index) => (
+        {slides.map((slide, index) => (
           <div
-            key={slide.image}
+            key={slide.id || index}
             className={`absolute inset-0 transition-opacity duration-1000 ease-in-out bg-cover bg-center ${
-              index === currentSlide ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
+              index === (currentSlide % slides.length) ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
             }`}
             style={{ backgroundImage: `url(${slide.image})` }}
           />
         ))}
 
-        {/* OVERLAY GRADIENTE DE ALTO CONTRASTE */}
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 to-slate-950/65 backdrop-blur-[2px]" />
+        {/* OVERLAY GRADIENTE DE OPACIDAD CONFIGURABLE (AJUSTABLE DESDE EL EDITOR) */}
+        <div
+          className={`absolute inset-0 backdrop-blur-[1px] transition-opacity duration-300 ${
+            estiloDegradado === 'red-dark'
+              ? 'bg-gradient-to-r from-slate-950 via-red-950/80 to-slate-950/60'
+              : estiloDegradado === 'gold-luxury'
+              ? 'bg-gradient-to-r from-slate-950 via-amber-950/80 to-slate-950/60'
+              : estiloDegradado === 'clear'
+              ? 'bg-gradient-to-r from-slate-950/80 via-slate-950/50 to-transparent'
+              : 'bg-gradient-to-r from-slate-950 via-slate-950/75 to-slate-950/50'
+          }`}
+          style={{ opacity: opacidadCapas }}
+        />
         
         {/* GLOW ACCENTS */}
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-red-600/30 rounded-full blur-3xl pointer-events-none" />
@@ -162,12 +180,12 @@ export default function HomeCatalog() {
 
             {/* CONTROLES / DOTS DEL CARRUSEL */}
             <div className="pt-4 flex items-center justify-center lg:justify-start gap-2">
-              {HERO_SLIDES.map((_, idx) => (
+              {slides.map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentSlide(idx)}
                   className={`h-2.5 rounded-full transition-all duration-300 ${
-                    idx === currentSlide ? 'w-8 bg-amber-400' : 'w-2.5 bg-white/40 hover:bg-white/70'
+                    idx === (currentSlide % slides.length) ? 'w-8 bg-amber-400' : 'w-2.5 bg-white/40 hover:bg-white/70'
                   }`}
                   title={`Ver imagen ${idx + 1}`}
                 />
