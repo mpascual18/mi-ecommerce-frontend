@@ -374,7 +374,7 @@ function ProductReviews({ producto }: { producto: Producto }) {
 
             <div className="pt-2 text-[10px] text-slate-400 font-semibold border-t border-slate-100 flex items-center gap-1">
               <span>🛒 Producto:</span>
-              <span className="text-slate-700 font-bold line-clamp-1">{productoNombre}</span>
+              <span className="text-slate-700 font-bold line-clamp-1">{producto.nombre}</span>
             </div>
           </div>
         ))}
