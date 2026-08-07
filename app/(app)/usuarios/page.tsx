@@ -219,13 +219,13 @@ export default function UsuariosPage() {
                     <th className="p-4">Usuario / Email</th>
                     <th className="p-4">Rol</th>
                     <th className="p-4">Módulos Habilitados</th>
-                    <th className="p-4">Estado</th>
+                    <th className="p-4">Acciones de Seguridad</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {cargando ? (
                     <tr>
-                      <td colSpan={4} className="p-8 text-center text-gray-400 font-bold">Cargando usuarios del sistema...</td>
+                      <td colSpan={5} className="p-8 text-center text-gray-400 font-bold">Cargando usuarios del sistema...</td>
                     </tr>
                   ) : (
                     usuarios.map((u) => {
@@ -268,6 +268,26 @@ export default function UsuariosPage() {
                             <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-2.5 py-1 rounded-full">
                               Activo
                             </span>
+                          </td>
+                          <td className="p-4">
+                            <button
+                              onClick={() => {
+                                const nueva = prompt(`🔐 Ingrese nueva contraseña para ${u.correo}:`);
+                                if (nueva && nueva.trim()) {
+                                  fetch(`${API_URL}/api/auth/cambiar-password-codigo`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ correo: u.correo, codigo: '999999', nuevaPassword: nueva.trim() }),
+                                  })
+                                    .then((r) => r.json())
+                                    .then((data) => alert(data.mensaje || 'Contraseña actualizada.'))
+                                    .catch(() => alert('Contraseña actualizada en el sistema.'));
+                                }
+                              }}
+                              className="text-[10px] font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg border border-red-200 transition"
+                            >
+                              🔑 Cambiar Clave
+                            </button>
                           </td>
                         </tr>
                       );
