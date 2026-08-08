@@ -14,6 +14,7 @@ import {
   Pie,
   Cell,
 } from 'recharts';
+import { ESTADOS_PEDIDO } from '@/lib/estadosPedido';
 
 type DashboardData = {
   estados: Array<{ estado: string; cantidad: number; monto: number }>;
@@ -23,14 +24,7 @@ type DashboardData = {
   pedidosHoy: number;
 };
 
-const COLOR_MAP: Record<string, string> = {
-  ingresado: '#f59e0b',
-  contactado: '#3b82f6',
-  confirmado: '#10b981',
-  en_camino: '#a855f7',
-  entregado: '#16a34a',
-  anulado: '#ef4444',
-};
+const COLOR_MAP: Record<string, string> = Object.fromEntries(ESTADOS_PEDIDO.map((e) => [e.id, e.hex]));
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -65,12 +59,14 @@ export default function DashboardPage() {
   const getMontoEstado = (est: string) => Number(data.estados.find((e) => e.estado === est)?.monto || 0);
 
   const cantIngresados = getCantEstado('ingresado');
-  const cantConfirmados = getCantEstado('confirmado');
+  const cantEnProceso = getCantEstado('en_proceso');
+  const cantLogistica = getCantEstado('logistica');
+  const cantEmpacado = getCantEstado('empacado');
   const cantEnCamino = getCantEstado('en_camino');
   const cantEntregados = getCantEstado('entregado');
   const cantAnulados = getCantEstado('anulado');
 
-  const totalPedidosSuma = cantIngresados + cantConfirmados + cantEnCamino + cantEntregados + cantAnulados;
+  const totalPedidosSuma = cantIngresados + cantEnProceso + cantLogistica + cantEmpacado + cantEnCamino + cantEntregados + cantAnulados;
   const efectividadEntregas = totalPedidosSuma > 0 ? Math.round((cantEntregados / (cantEntregados + cantAnulados || 1)) * 100) : 100;
 
   const limaData = data.regiones.find((r) => r.region === 'lima') || { cantidad: 0, monto: 0 };
@@ -78,8 +74,10 @@ export default function DashboardPage() {
 
   const chartPipelineData = [
     { name: 'Ingresados', cantidad: cantIngresados, monto: getMontoEstado('ingresado') },
-    { name: 'Confirmados', cantidad: cantConfirmados, monto: getMontoEstado('confirmado') },
-    { name: 'En Camino', cantidad: cantEnCamino, monto: getMontoEstado('en_camino') },
+    { name: 'En Gestión', cantidad: cantEnProceso, monto: getMontoEstado('en_proceso') },
+    { name: 'Por Empacar', cantidad: cantLogistica, monto: getMontoEstado('logistica') },
+    { name: 'Empacado', cantidad: cantEmpacado, monto: getMontoEstado('empacado') },
+    { name: 'En Tránsito', cantidad: cantEnCamino, monto: getMontoEstado('en_camino') },
     { name: 'Entregados', cantidad: cantEntregados, monto: getMontoEstado('entregado') },
     { name: 'Anulados', cantidad: cantAnulados, monto: getMontoEstado('anulado') },
   ];
@@ -187,7 +185,7 @@ export default function DashboardPage() {
           <span>📦 Embudo de Pedidos en Sistema</span>
         </h2>
 
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
           <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-2xl text-center space-y-1 shadow-2xs hover:shadow-md transition">
             <span className="text-xs font-black text-amber-800 uppercase block">📥 1. Ingresados</span>
             <p className="text-3xl font-black text-amber-900">{cantIngresados}</p>
@@ -195,27 +193,39 @@ export default function DashboardPage() {
           </div>
 
           <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-2xl text-center space-y-1 shadow-2xs hover:shadow-md transition">
-            <span className="text-xs font-black text-blue-800 uppercase block">📞 2. Contactados</span>
-            <p className="text-3xl font-black text-blue-900">{getCantEstado('contactado')}</p>
-            <span className="text-xs font-black text-blue-700 block">S/ {getMontoEstado('contactado').toFixed(2)}</span>
+            <span className="text-xs font-black text-blue-800 uppercase block">📞 2. En Gestión</span>
+            <p className="text-3xl font-black text-blue-900">{cantEnProceso}</p>
+            <span className="text-xs font-black text-blue-700 block">S/ {getMontoEstado('en_proceso').toFixed(2)}</span>
           </div>
 
-          <div className="p-4 bg-emerald-50 border-2 border-emerald-200 rounded-2xl text-center space-y-1 shadow-2xs hover:shadow-md transition">
-            <span className="text-xs font-black text-emerald-800 uppercase block">🟢 3. Confirmados</span>
-            <p className="text-3xl font-black text-emerald-900">{cantConfirmados}</p>
-            <span className="text-xs font-black text-emerald-700 block">S/ {getMontoEstado('confirmado').toFixed(2)}</span>
+          <div className="p-4 bg-indigo-50 border-2 border-indigo-200 rounded-2xl text-center space-y-1 shadow-2xs hover:shadow-md transition">
+            <span className="text-xs font-black text-indigo-800 uppercase block">📦 3. Por Empacar</span>
+            <p className="text-3xl font-black text-indigo-900">{cantLogistica}</p>
+            <span className="text-xs font-black text-indigo-700 block">S/ {getMontoEstado('logistica').toFixed(2)}</span>
+          </div>
+
+          <div className="p-4 bg-cyan-50 border-2 border-cyan-200 rounded-2xl text-center space-y-1 shadow-2xs hover:shadow-md transition">
+            <span className="text-xs font-black text-cyan-800 uppercase block">🗳️ 4. Empacado</span>
+            <p className="text-3xl font-black text-cyan-900">{cantEmpacado}</p>
+            <span className="text-xs font-black text-cyan-700 block">S/ {getMontoEstado('empacado').toFixed(2)}</span>
           </div>
 
           <div className="p-4 bg-purple-50 border-2 border-purple-200 rounded-2xl text-center space-y-1 shadow-2xs hover:shadow-md transition">
-            <span className="text-xs font-black text-purple-800 uppercase block">🚚 4. En Camino</span>
+            <span className="text-xs font-black text-purple-800 uppercase block">🚚 5. En Tránsito</span>
             <p className="text-3xl font-black text-purple-900">{cantEnCamino}</p>
             <span className="text-xs font-black text-purple-700 block">S/ {getMontoEstado('en_camino').toFixed(2)}</span>
           </div>
 
           <div className="p-4 bg-green-50 border-2 border-green-200 rounded-2xl text-center space-y-1 shadow-2xs hover:shadow-md transition">
-            <span className="text-xs font-black text-green-800 uppercase block">✅ 5. Entregados</span>
+            <span className="text-xs font-black text-green-800 uppercase block">✅ 6. Entregados</span>
             <p className="text-3xl font-black text-green-900">{cantEntregados}</p>
             <span className="text-xs font-black text-green-700 block">S/ {getMontoEstado('entregado').toFixed(2)}</span>
+          </div>
+
+          <div className="p-4 bg-red-50 border-2 border-red-200 rounded-2xl text-center space-y-1 shadow-2xs hover:shadow-md transition">
+            <span className="text-xs font-black text-red-800 uppercase block">🔴 7. Anulados</span>
+            <p className="text-3xl font-black text-red-900">{cantAnulados}</p>
+            <span className="text-xs font-black text-red-700 block">S/ {getMontoEstado('anulado').toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -237,7 +247,7 @@ export default function DashboardPage() {
                 />
                 <Bar dataKey="monto" radius={[10, 10, 0, 0]}>
                   {chartPipelineData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={Object.values(COLOR_MAP)[index % 6]} />
+                    <Cell key={`cell-${index}`} fill={Object.values(COLOR_MAP)[index % Object.keys(COLOR_MAP).length]} />
                   ))}
                 </Bar>
               </BarChart>

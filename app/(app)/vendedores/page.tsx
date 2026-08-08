@@ -22,7 +22,8 @@ export default function VendedoresWorkspacePage() {
         const pedidos = await res.json();
         
         if (Array.isArray(pedidos)) {
-          const confirmados = pedidos.filter((p: any) => p.estado === 'confirmado' || p.estado === 'entregado');
+          // "Confirmadas" = ya trabajadas por el vendedor (paso de ingresado a algo mas), sin contar anuladas.
+          const confirmados = pedidos.filter((p: any) => p.estado !== 'ingresado' && p.estado !== 'anulado');
           const totalSoles = confirmados.reduce((acc: number, p: any) => acc + Number(p.total), 0);
 
           setData({

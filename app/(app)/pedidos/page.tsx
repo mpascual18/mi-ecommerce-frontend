@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { API_URL } from '@/lib/api';
-import EtiquetaTermicaModal from '@/components/logistica/EtiquetaTermicaModal';
+import { ESTADOS_PEDIDO, ESTADOS_VENTA, EstadoPedido, getEstadoConfig } from '@/lib/estadosPedido';
 
 type Pedido = {
   id: number;
@@ -13,7 +13,7 @@ type Pedido = {
   provincia?: string;
   region: 'lima' | 'provincia';
   origen: string;
-  estado: 'ingresado' | 'en_proceso' | 'contactado' | 'confirmado' | 'logistica' | 'en_camino' | 'entregado' | 'anulado';
+  estado: EstadoPedido;
   total: number;
   metodo_pago: string;
   tracking_guia?: string;
@@ -21,14 +21,10 @@ type Pedido = {
   fecha: string;
 };
 
-const ESTADOS_CONFIG = [
-  { id: 'ingresado', label: '1. Por Atender', color: 'bg-amber-100 text-amber-900 border-amber-300', icon: '📥' },
-  { id: 'en_proceso', label: '2. En Gestión', color: 'bg-blue-100 text-blue-900 border-blue-300', icon: '📞' },
-  { id: 'logistica', label: '3. En Logística', color: 'bg-indigo-100 text-indigo-900 border-indigo-300', icon: '📦' },
-  { id: 'en_camino', label: '4. En Tránsito', color: 'bg-purple-100 text-purple-900 border-purple-300', icon: '🚚' },
-  { id: 'entregado', label: '5. Entregado / Conforme', color: 'bg-emerald-100 text-emerald-900 border-emerald-300', icon: '✅' },
-  { id: 'anulado', label: '6. Anulado', color: 'bg-red-100 text-red-900 border-red-300', icon: '🔴' }
-];
+// En Ventas solo se trabajan los tickets que aun no se enviaron a Logistica.
+// Una vez enviado (o anulado), el ticket deja de ser responsabilidad del
+// vendedor y se administra desde /logistica.
+const ESTADOS_CONFIG = ESTADOS_PEDIDO.filter(e => ESTADOS_VENTA.includes(e.id));
 
 export default function PedidosPage() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
@@ -36,9 +32,8 @@ export default function PedidosPage() {
   const [estadoFiltro, setEstadoFiltro] = useState<string>('todos');
   const [regionFiltro, setRegionFiltro] = useState<string>('todos');
 
-  // Modales
+  // Modal de ticket
   const [pedidoModal, setPedidoModal] = useState<Pedido | null>(null);
-  const [etiquetaModal, setEtiquetaModal] = useState<Pedido | null>(null);
   const [trackingGuia, setTrackingGuia] = useState('');
   const [notas, setNotas] = useState('');
 
@@ -47,7 +42,9 @@ export default function PedidosPage() {
     try {
       const res = await fetch(`${API_URL}/api/pedidos`);
       const data = await res.json();
-      setPedidos(Array.isArray(data) ? data : []);
+      // Ventas solo ve su propia bandeja de trabajo (ingresado / en_proceso).
+      const soloVenta = Array.isArray(data) ? data.filter((p: Pedido) => ESTADOS_VENTA.includes(p.estado)) : [];
+      setPedidos(soloVenta);
     } catch (err) {
       console.error('Error al cargar pedidos:', err);
       setPedidos([]);
@@ -59,6 +56,12 @@ export default function PedidosPage() {
   useEffect(() => {
     cargarPedidos();
   }, []);
+
+  const abrirTicket = (p: Pedido) => {
+    setPedidoModal(p);
+    setTrackingGuia(p.tracking_guia || '');
+    setNotas(p.notas_seguimiento || '');
+  };
 
   const cambiarEstadoPedido = async (id: number, nuevoEstado: string, guia = '', notasTexto = '', contactoMedio = '') => {
     if (nuevoEstado === 'anulado') {
@@ -90,13 +93,7 @@ export default function PedidosPage() {
 
   const enviarNotificacionWhatsApp = (p: Pedido) => {
     let msg = `Hola *${p.cliente_nombre}*, te saludamos de *P&R Store* 🛍️\n`;
-    if (p.estado === 'en_camino') {
-      msg += `Tu pedido *#${p.id}* por S/. ${Number(p.total).toFixed(2)} ya está en camino 🚚.\n`;
-      if (p.tracking_guia) msg += `N° Guía / Seguimiento: *${p.tracking_guia}*\n`;
-      msg += `Por favor estar atento al teléfono para la entrega. ¡Gracias por tu compra!`;
-    } else {
-      msg += `Respecto a tu pedido *#${p.id}* en estado *${p.estado.toUpperCase()}*.\nTotal a pagar: S/. ${Number(p.total).toFixed(2)}.`;
-    }
+    msg += `Respecto a tu pedido *#${p.id}* por S/. ${Number(p.total).toFixed(2)}. ¡Gracias por tu compra!`;
     const cleanPhone = p.celular.replace(/\D/g, '');
     const fullPhone = cleanPhone.startsWith('51') ? cleanPhone : `51${cleanPhone}`;
     window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, '_blank');
@@ -113,8 +110,8 @@ export default function PedidosPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-black text-gray-900">📦 CRM de Pedidos & Despachos</h1>
-          <p className="text-sm text-gray-500">Gestión de flujo por estados desde la recepción hasta la cobranza</p>
+          <h1 className="text-3xl font-black text-gray-900">📥 CRM de Ventas - Bandeja de Leads</h1>
+          <p className="text-sm text-gray-500">Contacta y confirma tus pedidos. Al enviarlos a Logística, salen de esta bandeja.</p>
         </div>
 
         {/* FILTRO DE REGION LIMA VS PROVINCIA */}
@@ -164,7 +161,7 @@ export default function PedidosPage() {
         })}
       </div>
 
-      {/* LISTA/GRID DE PEDIDOS */}
+      {/* LISTA/GRID DE PEDIDOS (TICKETS) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {cargando ? (
           <div className="col-span-full py-12 text-center text-gray-400 font-bold">
@@ -173,12 +170,17 @@ export default function PedidosPage() {
         ) : pedidosFiltrados.length === 0 ? (
           <div className="col-span-full py-12 text-center text-gray-400 space-y-2">
             <p className="font-bold text-sm text-gray-600">No hay pedidos en este estado o filtro seleccionado.</p>
+            <p className="text-xs text-gray-400">Los pedidos ya enviados a Logística se gestionan desde el módulo de Logística.</p>
           </div>
         ) : (
           pedidosFiltrados.map(p => {
-            const estadoCfg = ESTADOS_CONFIG.find(e => e.id === p.estado) || ESTADOS_CONFIG[0];
+            const estadoCfg = getEstadoConfig(p.estado);
             return (
-              <div key={p.id} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs hover:shadow-md transition space-y-3 flex flex-col justify-between">
+              <div
+                key={p.id}
+                onClick={() => abrirTicket(p)}
+                className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs hover:shadow-md hover:border-red-300 transition space-y-3 flex flex-col justify-between cursor-pointer"
+              >
                 <div className="space-y-2">
                   <div className="flex justify-between items-start">
                     <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full border ${estadoCfg.color}`}>
@@ -190,21 +192,18 @@ export default function PedidosPage() {
                   </div>
 
                   <div>
-                    <h3 className="font-bold text-gray-900 text-sm">{p.cliente_nombre}</h3>
+                    <h3 className="font-bold text-gray-900 text-sm">🎫 #{p.id} · {p.cliente_nombre}</h3>
                     <p className="text-xs text-blue-600 font-bold flex items-center justify-between">
                       <span>📞 {p.celular}</span>
-                      <button onClick={() => enviarNotificacionWhatsApp(p)} className="bg-green-100 hover:bg-green-200 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded-md transition">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); enviarNotificacionWhatsApp(p); }}
+                        className="bg-green-100 hover:bg-green-200 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded-md transition"
+                      >
                         💬 Contactar WhatsApp
                       </button>
                     </p>
                     <p className="text-xs text-gray-500 mt-1 line-clamp-2">📍 {p.direccion} ({p.distrito})</p>
                   </div>
-
-                  {p.tracking_guia && (
-                    <div className="bg-purple-50 border border-purple-200 text-purple-800 text-xs p-2 rounded-xl font-bold flex items-center gap-1">
-                      <span>🏷️ Tracking/Guía: {p.tracking_guia}</span>
-                    </div>
-                  )}
 
                   {p.notas_seguimiento && (
                     <p className="text-[11px] text-gray-500 italic bg-gray-50 p-2 rounded-lg border border-gray-100">
@@ -220,50 +219,29 @@ export default function PedidosPage() {
                   </div>
 
                   {/* ACCIONES RAPIDAS DE ESTADO Y LOGISTICA */}
-                  <div className="grid grid-cols-2 gap-2 pt-1 text-[11px]">
-                    <button
-                      onClick={() => setEtiquetaModal(p)}
-                      className="bg-slate-900 hover:bg-black text-white font-bold py-2 rounded-xl transition text-center flex items-center justify-center gap-1"
-                    >
-                      <span>🖨️ Rotulado 10x15</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setPedidoModal(p);
-                        setTrackingGuia(p.tracking_guia || '');
-                        setNotas(p.notas_seguimiento || '');
-                      }}
-                      className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2 rounded-xl transition text-center"
-                    >
-                      ✏️ Notas / Guía
-                    </button>
-
+                  <div className="grid grid-cols-1 gap-2 pt-1 text-[11px]">
                     {p.estado === 'ingresado' && (
-                      <button onClick={() => cambiarEstadoPedido(p.id, 'en_proceso', '', 'Cliente contactado por vendedor', 'WhatsApp')} className="col-span-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition shadow-xs">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); cambiarEstadoPedido(p.id, 'en_proceso', '', 'Cliente contactado por vendedor', 'WhatsApp'); }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition shadow-xs"
+                      >
                         👤 Tomar Pedido & Marcar Contactado
                       </button>
                     )}
                     {p.estado === 'en_proceso' && (
-                      <button onClick={() => cambiarEstadoPedido(p.id, 'logistica', '', 'Datos confirmados. Enviado a Logística para empaque.')} className="col-span-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl transition shadow-xs">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); cambiarEstadoPedido(p.id, 'logistica', '', 'Datos confirmados. Enviado a Logística para empaque.'); }}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl transition shadow-xs"
+                      >
                         📦 Confirmar & Enviar a Logística
                       </button>
                     )}
-                    {p.estado === 'logistica' && (
-                      <button onClick={() => cambiarEstadoPedido(p.id, 'en_camino', p.region === 'lima' ? 'MOTORIZADO-LIMA' : 'SHALOM-AGENCIA', 'En ruta de entrega.')} className="col-span-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 rounded-xl transition shadow-xs">
-                        🚚 Despachar (En Tránsito)
-                      </button>
-                    )}
-                    {p.estado === 'en_camino' && (
-                      <button onClick={() => cambiarEstadoPedido(p.id, 'entregado', '', 'Entregado y cobrado en puerta.')} className="col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl transition shadow-xs">
-                        ✅ Marcar Entregado & Conforme
-                      </button>
-                    )}
-                    {p.estado !== 'anulado' && p.estado !== 'entregado' && (
-                      <button onClick={() => cambiarEstadoPedido(p.id, 'anulado')} className="col-span-2 bg-red-50 hover:bg-red-100 text-red-700 font-bold py-1.5 rounded-xl transition text-center border border-red-200">
-                        🔴 Anular Pedido (Devuelve Stock)
-                      </button>
-                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); cambiarEstadoPedido(p.id, 'anulado'); }}
+                      className="bg-red-50 hover:bg-red-100 text-red-700 font-bold py-1.5 rounded-xl transition text-center border border-red-200"
+                    >
+                      🔴 Anular Pedido
+                    </button>
                   </div>
                 </div>
               </div>
@@ -272,35 +250,24 @@ export default function PedidosPage() {
         )}
       </div>
 
-      {/* MODAL PARA ETIQUETA TERMICA */}
-      {etiquetaModal && (
-        <EtiquetaTermicaModal
-          pedido={etiquetaModal}
-          onClose={() => setEtiquetaModal(null)}
-        />
-      )}
-
-      {/* MODAL PARA NOTAS Y GUIA */}
+      {/* MODAL DE TICKET: DETALLE COMPLETO Y EDICION DEL PEDIDO */}
       {pedidoModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setPedidoModal(null)}>
+          <div className="bg-white rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center border-b pb-2">
-              <h3 className="font-bold text-lg text-gray-900">Editar Pedido #{pedidoModal.id}</h3>
-              <button onClick={() => setPedidoModal(null)} className="font-bold text-gray-400">✕</button>
+              <h3 className="font-black text-lg text-gray-900">🎫 Ticket #{pedidoModal.id}</h3>
+              <button onClick={() => setPedidoModal(null)} className="font-bold text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+
+            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 space-y-1 text-xs">
+              <p className="font-black text-sm text-gray-900">{pedidoModal.cliente_nombre}</p>
+              <p className="text-blue-600 font-bold">📞 {pedidoModal.celular}</p>
+              <p className="text-gray-600">📍 {pedidoModal.direccion} ({pedidoModal.distrito}{pedidoModal.provincia ? `, ${pedidoModal.provincia}` : ''})</p>
+              <p className="text-gray-500">Origen: <strong className="text-gray-700">{pedidoModal.origen}</strong> · Método de pago: <strong className="text-gray-700">{pedidoModal.metodo_pago}</strong></p>
+              <p className="text-red-600 font-black text-sm pt-1">Total: S/ {Number(pedidoModal.total).toFixed(2)}</p>
             </div>
 
             <div className="space-y-3 text-xs">
-              <div>
-                <label className="block font-bold text-gray-700 mb-1">Número de Guía / Tracking (Shalom/Olva/Motorizado)</label>
-                <input
-                  type="text"
-                  value={trackingGuia}
-                  onChange={(e) => setTrackingGuia(e.target.value)}
-                  placeholder="Ej: SHALOM-123456"
-                  className="w-full bg-gray-50 border rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-red-500"
-                />
-              </div>
-
               <div>
                 <label className="block font-bold text-gray-700 mb-1">Notas de Seguimiento / Comentarios</label>
                 <textarea
@@ -311,30 +278,36 @@ export default function PedidosPage() {
                   className="w-full bg-gray-50 border rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-red-500"
                 ></textarea>
               </div>
-
-              <div>
-                <label className="block font-bold text-gray-700 mb-1">Cambiar Estado:</label>
-                <select
-                  value={pedidoModal.estado}
-                  onChange={(e) => setPedidoModal({ ...pedidoModal, estado: e.target.value as any })}
-                  className="w-full bg-gray-50 border rounded-xl p-2.5 font-bold"
-                >
-                  {ESTADOS_CONFIG.map(e => (
-                    <option key={e.id} value={e.id}>{e.label}</option>
-                  ))}
-                </select>
-              </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <button onClick={() => setPedidoModal(null)} className="px-4 py-2 bg-gray-100 font-bold text-xs rounded-xl">
-                Cancelar
-              </button>
+            <div className="grid grid-cols-1 gap-2 pt-2 border-t text-xs">
+              {pedidoModal.estado === 'ingresado' && (
+                <button
+                  onClick={() => cambiarEstadoPedido(pedidoModal.id, 'en_proceso', trackingGuia, notas || 'Cliente contactado por vendedor', 'WhatsApp')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition shadow-xs"
+                >
+                  👤 Tomar Pedido & Marcar Contactado
+                </button>
+              )}
+              {pedidoModal.estado === 'en_proceso' && (
+                <button
+                  onClick={() => cambiarEstadoPedido(pedidoModal.id, 'logistica', trackingGuia, notas || 'Datos confirmados. Enviado a Logística para empaque.')}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl transition shadow-xs"
+                >
+                  📦 Confirmar & Enviar a Logística
+                </button>
+              )}
               <button
                 onClick={() => cambiarEstadoPedido(pedidoModal.id, pedidoModal.estado, trackingGuia, notas)}
-                className="px-4 py-2 bg-red-600 text-white font-bold text-xs rounded-xl"
+                className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2 rounded-xl transition"
               >
-                Guardar Cambios
+                💾 Guardar Notas
+              </button>
+              <button
+                onClick={() => cambiarEstadoPedido(pedidoModal.id, 'anulado')}
+                className="bg-red-50 hover:bg-red-100 text-red-700 font-bold py-1.5 rounded-xl transition text-center border border-red-200"
+              >
+                🔴 Anular Pedido (Devuelve Stock)
               </button>
             </div>
           </div>
@@ -343,4 +316,3 @@ export default function PedidosPage() {
     </div>
   );
 }
-

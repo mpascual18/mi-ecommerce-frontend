@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { API_URL } from '@/lib/api';
+import { ESTADOS_LOGISTICA, EstadoPedido, getEstadoConfig } from '@/lib/estadosPedido';
 
 type PedidoLogistica = {
   id: number;
@@ -12,7 +13,7 @@ type PedidoLogistica = {
   provincia?: string;
   region: 'lima' | 'provincia';
   origen: string;
-  estado: 'ingresado' | 'contactado' | 'confirmado' | 'en_camino' | 'entregado' | 'anulado';
+  estado: EstadoPedido;
   total: number;
   metodo_pago: string;
   tracking_guia?: string;
@@ -20,13 +21,26 @@ type PedidoLogistica = {
   fecha: string;
 };
 
+const TABS_LOGISTICA: { id: EstadoPedido | 'todos'; label: string; icon: string }[] = [
+  { id: 'logistica', label: 'Por Empacar', icon: '📦' },
+  { id: 'empacado', label: 'Empacado', icon: '🗳️' },
+  { id: 'en_camino', label: 'En Tránsito', icon: '🚚' },
+  { id: 'entregado', label: 'Entregados & Cobrados', icon: '✅' },
+  { id: 'anulado', label: 'Anulados', icon: '🔴' },
+  { id: 'todos', label: 'Ver Todos', icon: '📋' },
+];
+
 export default function LogisticaPage() {
   const [pedidos, setPedidos] = useState<PedidoLogistica[]>([]);
   const [cargando, setCargando] = useState(true);
-  const [filtroEstado, setFiltroEstado] = useState<string>('confirmado'); // Default: Pedidos listos para empaque
+  const [filtroEstado, setFiltroEstado] = useState<string>('logistica'); // Default: recien llegados de Ventas
   const [filtroRegion, setFiltroRegion] = useState<string>('todos');
-  
-  // Packing & Label Print Modal
+
+  // Modal de ticket: detalle, notas y cambio manual de estado
+  const [pedidoModal, setPedidoModal] = useState<PedidoLogistica | null>(null);
+  const [notas, setNotas] = useState('');
+
+  // Modal de rotulado/despacho: imprime etiqueta y asigna guia/agencia
   const [etiquetaModal, setEtiquetaModal] = useState<PedidoLogistica | null>(null);
   const [guiaInput, setGuiaInput] = useState('');
   const [agenciaInput, setAgenciaInput] = useState('Shalom');
@@ -36,7 +50,9 @@ export default function LogisticaPage() {
     try {
       const res = await fetch(`${API_URL}/api/pedidos`);
       const data = await res.json();
-      setPedidos(Array.isArray(data) ? data : []);
+      // Logistica solo ve tickets que Ventas ya envio (o que se resolvieron aqui mismo).
+      const soloLogistica = Array.isArray(data) ? data.filter((p: PedidoLogistica) => ESTADOS_LOGISTICA.includes(p.estado)) : [];
+      setPedidos(soloLogistica);
     } catch (err) {
       console.error('Error al cargar cola logística:', err);
       setPedidos([]);
@@ -49,25 +65,37 @@ export default function LogisticaPage() {
     cargarPedidos();
   }, []);
 
-  const actualizarDespacho = async (id: number, nuevoEstado: string, guia = '') => {
+  const abrirTicket = (p: PedidoLogistica) => {
+    setPedidoModal(p);
+    setNotas(p.notas_seguimiento || '');
+  };
+
+  const cambiarEstado = async (id: number, nuevoEstado: string, guia = '', notasTexto = '') => {
+    if (nuevoEstado === 'anulado') {
+      if (!confirm('⚠️ Al anular este pedido, el stock reservado regresará automáticamente al inventario del almacén. ¿Deseas continuar?')) {
+        return;
+      }
+    }
+
     try {
       const res = await fetch(`${API_URL}/api/pedidos/${id}/estado`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           estado: nuevoEstado,
-          tracking_guia: guia || guiaInput,
-          notas_seguimiento: `Despachado por almacén - ${agenciaInput}`
+          tracking_guia: guia,
+          notas_seguimiento: notasTexto
         })
       });
 
       if (res.ok) {
         setEtiquetaModal(null);
+        setPedidoModal(null);
         setGuiaInput('');
         cargarPedidos();
       }
     } catch (err) {
-      console.error('Error al actualizar despacho:', err);
+      console.error('Error al actualizar estado logístico:', err);
     }
   };
 
@@ -86,7 +114,7 @@ export default function LogisticaPage() {
             <span className="bg-emerald-100 text-emerald-800 text-xs font-black px-2.5 py-0.5 rounded-full uppercase">Módulo de Almacén & Despacho</span>
           </div>
           <h1 className="text-2xl font-black text-gray-900 mt-1">📦 Cola de Empaque y Gestión Logística</h1>
-          <p className="text-xs text-gray-500">Procesa pedidos confirmados, imprime rotulados y asigna guías de transporte</p>
+          <p className="text-xs text-gray-500">Tickets enviados por Ventas: empaca, despacha y da seguimiento hasta la entrega</p>
         </div>
 
         {/* REGION FILTER SWITCH */}
@@ -114,30 +142,15 @@ export default function LogisticaPage() {
 
       {/* TABS DE ESTADO LOGÍSTICO */}
       <div className="flex items-center gap-2 border-b border-gray-200 pb-2 overflow-x-auto">
-        <button
-          onClick={() => setFiltroEstado('confirmado')}
-          className={`px-4 py-2.5 rounded-xl font-bold text-xs border transition whitespace-nowrap flex items-center gap-2 ${filtroEstado === 'confirmado' ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' : 'bg-white text-gray-700 border-gray-200'}`}
-        >
-          <span>🟢 Por Empaquetar ({pedidos.filter(p => p.estado === 'confirmado').length})</span>
-        </button>
-        <button
-          onClick={() => setFiltroEstado('en_camino')}
-          className={`px-4 py-2.5 rounded-xl font-bold text-xs border transition whitespace-nowrap flex items-center gap-2 ${filtroEstado === 'en_camino' ? 'bg-purple-600 text-white border-purple-600 shadow-xs' : 'bg-white text-gray-700 border-gray-200'}`}
-        >
-          <span>🚚 En Camino / Despachados ({pedidos.filter(p => p.estado === 'en_camino').length})</span>
-        </button>
-        <button
-          onClick={() => setFiltroEstado('entregado')}
-          className={`px-4 py-2.5 rounded-xl font-bold text-xs border transition whitespace-nowrap flex items-center gap-2 ${filtroEstado === 'entregado' ? 'bg-green-700 text-white border-green-700 shadow-xs' : 'bg-white text-gray-700 border-gray-200'}`}
-        >
-          <span>✅ Entregados & Cobrados ({pedidos.filter(p => p.estado === 'entregado').length})</span>
-        </button>
-        <button
-          onClick={() => setFiltroEstado('todos')}
-          className={`px-4 py-2.5 rounded-xl font-bold text-xs border transition whitespace-nowrap ${filtroEstado === 'todos' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-200'}`}
-        >
-          Ver Todos ({pedidos.length})
-        </button>
+        {TABS_LOGISTICA.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setFiltroEstado(tab.id)}
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs border transition whitespace-nowrap flex items-center gap-2 ${filtroEstado === tab.id ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' : 'bg-white text-gray-700 border-gray-200'}`}
+          >
+            <span>{tab.icon} {tab.label} ({tab.id === 'todos' ? pedidos.length : pedidos.filter(p => p.estado === tab.id).length})</span>
+          </button>
+        ))}
       </div>
 
       {/* COLA DE PAQUETES */}
@@ -151,74 +164,166 @@ export default function LogisticaPage() {
             ✅ No hay paquetes pendientes en este estado.
           </div>
         ) : (
-          pedidosFiltrados.map((p) => (
-            <div key={p.id} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs hover:shadow-md transition space-y-3 flex flex-col justify-between">
-              <div className="space-y-2">
-                <div className="flex justify-between items-start">
-                  <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                    ORDEN #{p.id}
-                  </span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${p.region === 'lima' ? 'bg-red-50 text-red-700' : 'bg-blue-50 text-blue-700'}`}>
-                    {p.region === 'lima' ? '🏢 Lima Express' : '🚛 Provincia Agencia'}
-                  </span>
-                </div>
-
-                <div>
-                  <h3 className="font-extrabold text-gray-900 text-sm">{p.cliente_nombre}</h3>
-                  <p className="text-xs text-blue-600 font-bold">📞 {p.celular}</p>
-                  <p className="text-xs text-gray-600 mt-1">📍 {p.direccion} ({p.distrito})</p>
-                </div>
-
-                {p.tracking_guia && (
-                  <div className="bg-purple-50 border border-purple-200 text-purple-900 text-xs p-2.5 rounded-xl font-bold flex justify-between items-center">
-                    <span>🏷️ Guía: {p.tracking_guia}</span>
+          pedidosFiltrados.map((p) => {
+            const estadoCfg = getEstadoConfig(p.estado);
+            return (
+              <div
+                key={p.id}
+                onClick={() => abrirTicket(p)}
+                className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs hover:shadow-md hover:border-emerald-300 transition space-y-3 flex flex-col justify-between cursor-pointer"
+              >
+                <div className="space-y-2">
+                  <div className="flex justify-between items-start">
+                    <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full border ${estadoCfg.color}`}>
+                      {estadoCfg.icon} {estadoCfg.label}
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${p.region === 'lima' ? 'bg-red-50 text-red-700' : 'bg-blue-50 text-blue-700'}`}>
+                      {p.region === 'lima' ? '🏢 Lima Express' : '🚛 Provincia Agencia'}
+                    </span>
                   </div>
-                )}
-              </div>
 
-              <div className="pt-3 border-t border-gray-100 space-y-2">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-gray-500 font-bold">Cobrar al cliente:</span>
-                  <span className="text-base font-black text-red-600">S/ {Number(p.total).toFixed(2)}</span>
-                </div>
+                  <div>
+                    <h3 className="font-extrabold text-gray-900 text-sm">🎫 #{p.id} · {p.cliente_nombre}</h3>
+                    <p className="text-xs text-blue-600 font-bold">📞 {p.celular}</p>
+                    <p className="text-xs text-gray-600 mt-1">📍 {p.direccion} ({p.distrito})</p>
+                  </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs font-bold pt-1">
-                  <button
-                    onClick={() => {
-                      setEtiquetaModal(p);
-                      setGuiaInput(p.tracking_guia || '');
-                    }}
-                    className="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 rounded-xl transition text-center flex items-center justify-center gap-1"
-                  >
-                    <span>🏷️ Imprimir Rotulado</span>
-                  </button>
-
-                  {p.estado === 'confirmado' && (
-                    <button
-                      onClick={() => {
-                        setEtiquetaModal(p);
-                        setGuiaInput(p.tracking_guia || '');
-                      }}
-                      className="bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-xl transition text-center"
-                    >
-                      🚚 Despachar
-                    </button>
-                  )}
-
-                  {p.estado === 'en_camino' && (
-                    <button
-                      onClick={() => actualizarDespacho(p.id, 'entregado')}
-                      className="bg-green-600 hover:bg-green-700 text-white py-2 rounded-xl transition text-center"
-                    >
-                      ✅ Marcar Entregado
-                    </button>
+                  {p.tracking_guia && (
+                    <div className="bg-purple-50 border border-purple-200 text-purple-900 text-xs p-2.5 rounded-xl font-bold flex justify-between items-center">
+                      <span>🏷️ Guía: {p.tracking_guia}</span>
+                    </div>
                   )}
                 </div>
+
+                <div className="pt-3 border-t border-gray-100 space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-gray-500 font-bold">Cobrar al cliente:</span>
+                    <span className="text-base font-black text-red-600">S/ {Number(p.total).toFixed(2)}</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2 text-xs font-bold pt-1">
+                    {p.estado === 'logistica' && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); cambiarEstado(p.id, 'empacado', p.tracking_guia, 'Pedido empacado, listo para despacho.'); }}
+                        className="bg-cyan-600 hover:bg-cyan-700 text-white py-2 rounded-xl transition text-center"
+                      >
+                        🗳️ Marcar Empacado
+                      </button>
+                    )}
+
+                    {p.estado === 'empacado' && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setEtiquetaModal(p); setGuiaInput(p.tracking_guia || ''); }}
+                        className="bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-xl transition text-center"
+                      >
+                        🚚 Despachar (En Tránsito)
+                      </button>
+                    )}
+
+                    {p.estado === 'en_camino' && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); cambiarEstado(p.id, 'entregado', p.tracking_guia, 'Entregado y cobrado en puerta.'); }}
+                        className="bg-green-600 hover:bg-green-700 text-white py-2 rounded-xl transition text-center"
+                      >
+                        ✅ Marcar Entregado
+                      </button>
+                    )}
+
+                    {(p.estado === 'logistica' || p.estado === 'empacado' || p.estado === 'en_camino') && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); cambiarEstado(p.id, 'anulado'); }}
+                        className="bg-red-50 hover:bg-red-100 text-red-700 py-1.5 rounded-xl transition text-center border border-red-200"
+                      >
+                        🔴 Anular Pedido
+                      </button>
+                    )}
+
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEtiquetaModal(p); setGuiaInput(p.tracking_guia || ''); }}
+                      className="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 rounded-xl transition text-center flex items-center justify-center gap-1"
+                    >
+                      🏷️ Imprimir Rotulado
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
+
+      {/* MODAL DE TICKET: DETALLE, NOTAS Y CAMBIO MANUAL DE ESTADO */}
+      {pedidoModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setPedidoModal(null)}>
+          <div className="bg-white rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center border-b pb-2">
+              <h3 className="font-black text-lg text-gray-900">🎫 Ticket #{pedidoModal.id}</h3>
+              <button onClick={() => setPedidoModal(null)} className="font-bold text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+
+            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 space-y-1 text-xs">
+              <p className="font-black text-sm text-gray-900">{pedidoModal.cliente_nombre}</p>
+              <p className="text-blue-600 font-bold">📞 {pedidoModal.celular}</p>
+              <p className="text-gray-600">📍 {pedidoModal.direccion} ({pedidoModal.distrito}{pedidoModal.provincia ? `, ${pedidoModal.provincia}` : ''})</p>
+              <p className="text-gray-500">Método de pago: <strong className="text-gray-700">{pedidoModal.metodo_pago}</strong></p>
+              {pedidoModal.tracking_guia && <p className="text-gray-500">Guía: <strong className="text-gray-700">{pedidoModal.tracking_guia}</strong></p>}
+              <p className="text-red-600 font-black text-sm pt-1">Total a cobrar: S/ {Number(pedidoModal.total).toFixed(2)}</p>
+            </div>
+
+            <div>
+              <label className="block font-bold text-gray-700 mb-1 text-xs">Notas de Almacén / Seguimiento</label>
+              <textarea
+                rows={3}
+                value={notas}
+                onChange={(e) => setNotas(e.target.value)}
+                placeholder="Ej: Paquete revisado, falta confirmar horario con motorizado..."
+                className="w-full bg-gray-50 border rounded-xl p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              ></textarea>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 pt-2 border-t text-xs">
+              {pedidoModal.estado === 'logistica' && (
+                <button
+                  onClick={() => cambiarEstado(pedidoModal.id, 'empacado', pedidoModal.tracking_guia, notas || 'Pedido empacado, listo para despacho.')}
+                  className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2.5 rounded-xl transition"
+                >
+                  🗳️ Marcar Empacado
+                </button>
+              )}
+              {pedidoModal.estado === 'empacado' && (
+                <button
+                  onClick={() => { setEtiquetaModal(pedidoModal); setGuiaInput(pedidoModal.tracking_guia || ''); setPedidoModal(null); }}
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 rounded-xl transition"
+                >
+                  🚚 Despachar (En Tránsito)
+                </button>
+              )}
+              {pedidoModal.estado === 'en_camino' && (
+                <button
+                  onClick={() => cambiarEstado(pedidoModal.id, 'entregado', pedidoModal.tracking_guia, notas || 'Entregado y cobrado en puerta.')}
+                  className="bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-xl transition"
+                >
+                  ✅ Marcar Entregado
+                </button>
+              )}
+              <button
+                onClick={() => cambiarEstado(pedidoModal.id, pedidoModal.estado, pedidoModal.tracking_guia, notas)}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2 rounded-xl transition"
+              >
+                💾 Guardar Notas
+              </button>
+              {pedidoModal.estado !== 'entregado' && pedidoModal.estado !== 'anulado' && (
+                <button
+                  onClick={() => cambiarEstado(pedidoModal.id, 'anulado')}
+                  className="bg-red-50 hover:bg-red-100 text-red-700 font-bold py-1.5 rounded-xl transition border border-red-200"
+                >
+                  🔴 Anular Pedido (Devuelve Stock)
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL DE ROTULADO Y ROTULO DE EMPAQUE IMPRIMIBLE */}
       {etiquetaModal && (
@@ -277,12 +382,16 @@ export default function LogisticaPage() {
               <button onClick={() => window.print()} className="px-4 py-2 bg-gray-200 font-bold text-xs rounded-xl">
                 🖨️ Imprimir Etiqueta
               </button>
-              <button
-                onClick={() => actualizarDespacho(etiquetaModal.id, 'en_camino', guiaInput)}
-                className="px-5 py-2.5 bg-purple-600 text-white font-black text-xs rounded-xl shadow-md"
-              >
-                🚚 Confirmar Despacho
-              </button>
+              {etiquetaModal.estado === 'empacado' ? (
+                <button
+                  onClick={() => cambiarEstado(etiquetaModal.id, 'en_camino', guiaInput, `Despachado por almacén - ${agenciaInput}`)}
+                  className="px-5 py-2.5 bg-purple-600 text-white font-black text-xs rounded-xl shadow-md"
+                >
+                  🚚 Confirmar Despacho
+                </button>
+              ) : (
+                <span className="text-[11px] text-gray-400 font-bold">Solo imprime la etiqueta en este estado.</span>
+              )}
             </div>
           </div>
         </div>
