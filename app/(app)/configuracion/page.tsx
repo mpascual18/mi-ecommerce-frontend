@@ -28,9 +28,41 @@ export default function ConfiguracionPage() {
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState('');
 
+  // Estados Zoho Mail SMTP
+  const [zohoPassword, setZohoPassword] = useState('');
+  const [adminEmailTest, setAdminEmailTest] = useState('mpascual@pyr-store.com');
+  const [probandoCorreo, setProbandoCorreo] = useState(false);
+  const [resultadoPrueba, setResultadoPrueba] = useState('');
+
   useEffect(() => {
     cargarConfig();
   }, []);
+
+  const probarCorreoSmtp = async () => {
+    setProbandoCorreo(true);
+    setResultadoPrueba('');
+    try {
+      const res = await fetch(`${API_URL}/api/configuracion/probar-correo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emailDestino: adminEmailTest || 'mpascual@pyr-store.com',
+          zohoPassword: zohoPassword,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setResultadoPrueba(data.message || '✅ Correo de prueba enviado exitosamente.');
+      } else {
+        setResultadoPrueba(`❌ Error SMTP: ${data.error || 'No se pudo enviar el correo de prueba.'}`);
+      }
+    } catch (err: any) {
+      setResultadoPrueba(`❌ Error de conexión: ${err.message || 'Error al conectar con servidor.'}`);
+    } finally {
+      setProbandoCorreo(false);
+    }
+  };
 
   const cargarConfig = async () => {
     setCargando(true);
@@ -228,6 +260,63 @@ export default function ConfiguracionPage() {
                 <div className="flex items-center gap-3 pt-2">
                   <img src={config.logoUrl} alt="Logo" className="w-16 h-16 object-cover rounded-full border border-gray-300" />
                   <span className="text-xs font-bold text-green-600">Logo cargado y activo para la tienda web</span>
+                </div>
+              )}
+            </div>
+
+            {/* ZOHO MAIL SMTP NOTIFICATIONS CARD */}
+            <div className="border border-slate-200 p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 text-white space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider block">CONFIGURACIÓN DE NOTIFICACIONES</span>
+                  <h4 className="font-heading font-black text-sm text-white">📩 Correo Corporativo Zoho Mail (info@pyr-store.com)</h4>
+                </div>
+                <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-2.5 py-1 rounded-full uppercase">
+                  info@pyr-store.com
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-300">
+                Cada nuevo pedido registrado en la web enviará una alerta instantánea desde <strong>info@pyr-store.com</strong> hacia <strong>mpascual@pyr-store.com</strong>.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300 mb-1">Clave de Aplicación Zoho Mail (info@pyr-store.com)</label>
+                  <input
+                    type="password"
+                    value={zohoPassword}
+                    onChange={(e) => setZohoPassword(e.target.value)}
+                    placeholder="Ingresa la clave de info@pyr-store.com"
+                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300 mb-1">Correo Notificación Admin</label>
+                  <input
+                    type="email"
+                    value={adminEmailTest}
+                    onChange={(e) => setAdminEmailTest(e.target.value)}
+                    placeholder="mpascual@pyr-store.com"
+                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={probarCorreoSmtp}
+                  disabled={probandoCorreo}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition flex items-center gap-1.5 shadow-md disabled:opacity-50"
+                >
+                  <span>{probandoCorreo ? '⌛ Enviando Prueba...' : '🧪 Enviar Correo de Prueba a Zoho Mail'}</span>
+                </button>
+              </div>
+
+              {resultadoPrueba && (
+                <div className={`p-3 rounded-xl text-xs font-bold ${resultadoPrueba.includes('✅') ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-700' : 'bg-red-950/80 text-red-300 border border-red-700'}`}>
+                  {resultadoPrueba}
                 </div>
               )}
             </div>
