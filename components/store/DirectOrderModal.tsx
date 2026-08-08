@@ -67,8 +67,9 @@ export default function DirectOrderModal({
     const isLima = distrito.toLowerCase().includes('lima') || !distrito.toLowerCase().includes('provincia');
 
     // 1. Guardar en PostgreSQL ERP
+    let registroExitoso = true;
     try {
-      await fetch(`${API_URL}/api/pedidos`, {
+      const res = await fetch(`${API_URL}/api/pedidos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -90,8 +91,13 @@ export default function DirectOrderModal({
           ],
         }),
       });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(errBody.error || `HTTP ${res.status}`);
+      }
     } catch (err) {
-      console.warn('⚠️ Error al registrar en backend, abriendo WhatsApp:', err);
+      registroExitoso = false;
+      console.error('❌ No se pudo registrar el pedido en el CRM (quedará solo en WhatsApp):', err);
     }
 
     // 2. Disparar Meta Pixel Events
@@ -135,6 +141,9 @@ export default function DirectOrderModal({
 
     setEnviando(false);
     onClose();
+    if (!registroExitoso) {
+      alert('Tu pedido se enviará por WhatsApp, pero tuvimos un problema técnico al registrarlo en el sistema. Nuestro equipo lo confirmará manualmente contigo.');
+    }
     window.open(url, '_blank');
   };
 

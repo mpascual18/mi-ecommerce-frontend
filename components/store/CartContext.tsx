@@ -98,6 +98,7 @@ type CartContextValue = {
   setCheckoutForm: (form: CheckoutForm) => void;
   enviando: boolean;
   pedidoConfirmado: boolean;
+  pedidoErrorRegistro: boolean;
   confirmarPedido: () => Promise<void>;
 };
 
@@ -117,6 +118,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   });
   const [enviando, setEnviando] = useState(false);
   const [pedidoConfirmado, setPedidoConfirmado] = useState(false);
+  const [pedidoErrorRegistro, setPedidoErrorRegistro] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -174,8 +176,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const envio = calcularEnvio(totalCarrito);
     const totalConEnvio = totalCarrito + envio.costo;
 
+    let registroExitoso = true;
     try {
-      await fetch(`${API_URL}/api/pedidos`, {
+      const res = await fetch(`${API_URL}/api/pedidos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -190,8 +193,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
           items: cart.map((i) => ({ producto_id: i.id, cantidad: i.qty, precio_unitario: i.price })),
         }),
       });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(errBody.error || `HTTP ${res.status}`);
+      }
     } catch (err) {
-      console.warn('No se pudo registrar el pedido en el sistema, se continúa por WhatsApp:', err);
+      registroExitoso = false;
+      console.error('❌ No se pudo registrar el pedido en el CRM (quedará solo en WhatsApp):', err);
     }
 
     const itemsFormateados = cart.map((i) => `• ${i.title} (x${i.qty}) - ${soles(i.price * i.qty)}`).join('\n');
@@ -200,13 +208,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     window.open(`https://wa.me/${config.whatsappNumber}?text=${encodeURIComponent(mensaje)}`, '_blank');
 
-    setPedidoConfirmado(true);
+    setPedidoConfirmado(registroExitoso);
+    setPedidoErrorRegistro(!registroExitoso);
     setCart([]);
     setEnviando(false);
     setTimeout(() => {
       setPedidoConfirmado(false);
+      setPedidoErrorRegistro(false);
       setCartOpen(false);
-    }, 2500);
+    }, registroExitoso ? 2500 : 5000);
   }
 
   const value = useMemo(
@@ -223,10 +233,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setCheckoutForm,
       enviando,
       pedidoConfirmado,
+      pedidoErrorRegistro,
       confirmarPedido,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [config, cart, cartOpen, checkoutForm, enviando, pedidoConfirmado]
+    [config, cart, cartOpen, checkoutForm, enviando, pedidoConfirmado, pedidoErrorRegistro]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

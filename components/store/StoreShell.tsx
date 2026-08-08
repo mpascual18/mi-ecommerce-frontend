@@ -240,6 +240,7 @@ function CartDrawer() {
     setCheckoutForm,
     enviando,
     pedidoConfirmado,
+    pedidoErrorRegistro,
     confirmarPedido,
     config,
   } = useCart();
@@ -285,6 +286,12 @@ function CartDrawer() {
             <div className="py-16 text-center space-y-3">
               <div className="text-4xl">✅</div>
               <p className="text-sm font-bold text-emerald-700">¡Pedido enviado! Te contactaremos por WhatsApp para confirmar.</p>
+            </div>
+          ) : pedidoErrorRegistro ? (
+            <div className="py-16 text-center space-y-3">
+              <div className="text-4xl">⚠️</div>
+              <p className="text-sm font-bold text-amber-700">Tu pedido se envió por WhatsApp, pero tuvimos un problema técnico al registrarlo en el sistema.</p>
+              <p className="text-xs text-slate-500">Nuestro equipo lo confirmará manualmente contigo por WhatsApp.</p>
             </div>
           ) : cart.length === 0 ? (
             <div className="py-12 text-center space-y-2 text-slate-400">
