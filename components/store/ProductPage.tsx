@@ -552,15 +552,8 @@ export default function ProductPage({ slug }: { slug: string }) {
             </div>
           </div>
 
-          <div
-            className="text-sm text-slate-600 leading-relaxed [&_p]:mb-2.5 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-3 [&_li]:mb-1.5 [&_img]:rounded-xl [&_img]:max-w-full [&_img]:h-auto [&_img]:my-3"
-            dangerouslySetInnerHTML={{
-              __html: producto.descripcion ? sanearDescripcionHtml(producto.descripcion) : 'Producto importado de alta calidad.',
-            }}
-          />
-
           {/* COMBOS PROMO DE ALTA CONVERSIÓN */}
-          <div className="space-y-3 pt-2">
+          <div className="space-y-3 pt-1">
             <h3 className="text-xs font-heading font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
               <span>🎁 SELECCIONA TU PROMO CON DESCUENTO:</span>
             </h3>
@@ -653,6 +646,19 @@ export default function ProductPage({ slug }: { slug: string }) {
           >
             <span>⚡ ¡PEDIR AHORA - PAGO CONTRA ENTREGA!</span>
           </button>
+
+          {/* DESCRIPCIÓN DEL PRODUCTO */}
+          <div className="pt-2">
+            <h3 className="text-xs font-heading font-black text-slate-900 uppercase tracking-wider mb-2">
+              📖 DESCRIPCIÓN DEL PRODUCTO & DETALLES:
+            </h3>
+            <div
+              className="text-sm text-slate-600 leading-relaxed [&_p]:mb-2.5 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-3 [&_li]:mb-1.5 [&_img]:rounded-xl [&_img]:max-w-full [&_img]:h-auto [&_img]:my-3"
+              dangerouslySetInnerHTML={{
+                __html: producto.descripcion ? sanearDescripcionHtml(producto.descripcion) : 'Producto importado de alta calidad.',
+              }}
+            />
+          </div>
         </div>
       </div>
 
@@ -673,17 +679,21 @@ export default function ProductPage({ slug }: { slug: string }) {
         />
       )}
 
-      {/* STICKY BOTTOM BUTTON MOVIL */}
-      <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 shadow-2xl p-3 flex items-center justify-between gap-3">
+      {/* STICKY BOTTOM BUTTON FLOTANTE QUE SIGUE AL SCROLL */}
+      <div className="fixed bottom-0 inset-x-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 shadow-2xl p-3 flex items-center justify-between gap-4 max-w-5xl mx-auto md:rounded-t-3xl md:bottom-2 md:border">
+        <div className="hidden sm:block">
+          <span className="block text-[10px] text-amber-400 font-bold uppercase">{producto.nombre}</span>
+          <span className="text-xs text-slate-300 font-bold">{selectedPromo.name}</span>
+        </div>
         <div>
           <span className="block text-[10px] text-slate-400 font-bold uppercase">Total Promo</span>
-          <span className="text-lg font-heading font-black text-red-600">{soles(selectedPromo.price)}</span>
+          <span className="text-lg font-heading font-black text-amber-300">{soles(selectedPromo.price)}</span>
         </div>
         <button
           onClick={abrirModalDirecto}
-          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-heading font-black py-3.5 px-4 rounded-2xl text-xs flex items-center justify-center gap-1.5 shadow-lg"
+          className="flex-1 max-w-xs bg-emerald-600 hover:bg-emerald-700 text-white font-heading font-black py-3 px-4 rounded-2xl text-xs flex items-center justify-center gap-1.5 shadow-lg transform hover:-translate-y-0.5 transition"
         >
-          <span>¡PEDIR CONTRA ENTREGA!</span>
+          <span>⚡ ¡PEDIR AHORA - PAGAR AL RECIBIR!</span>
         </button>
       </div>
     </main>

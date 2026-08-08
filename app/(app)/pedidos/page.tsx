@@ -13,7 +13,7 @@ type Pedido = {
   provincia?: string;
   region: 'lima' | 'provincia';
   origen: string;
-  estado: 'ingresado' | 'contactado' | 'confirmado' | 'en_camino' | 'entregado' | 'anulado';
+  estado: 'ingresado' | 'en_proceso' | 'contactado' | 'confirmado' | 'logistica' | 'en_camino' | 'entregado' | 'anulado';
   total: number;
   metodo_pago: string;
   tracking_guia?: string;
@@ -22,12 +22,12 @@ type Pedido = {
 };
 
 const ESTADOS_CONFIG = [
-  { id: 'ingresado', label: '1. Ingresado', color: 'bg-amber-100 text-amber-800 border-amber-300', icon: '📥' },
-  { id: 'contactado', label: '2. Contactado', color: 'bg-blue-100 text-blue-800 border-blue-300', icon: '📞' },
-  { id: 'confirmado', label: '3. Confirmado', color: 'bg-emerald-100 text-emerald-800 border-emerald-300', icon: '🟢' },
-  { id: 'en_camino', label: '4. En Camino', color: 'bg-purple-100 text-purple-800 border-purple-300', icon: '🚚' },
-  { id: 'entregado', label: '5. Entregado / Cobrado', color: 'bg-green-100 text-green-800 border-green-300', icon: '✅' },
-  { id: 'anulado', label: '6. Anulado', color: 'bg-red-100 text-red-800 border-red-300', icon: '🔴' }
+  { id: 'ingresado', label: '1. Por Atender', color: 'bg-amber-100 text-amber-900 border-amber-300', icon: '📥' },
+  { id: 'en_proceso', label: '2. En Gestión', color: 'bg-blue-100 text-blue-900 border-blue-300', icon: '📞' },
+  { id: 'logistica', label: '3. En Logística', color: 'bg-indigo-100 text-indigo-900 border-indigo-300', icon: '📦' },
+  { id: 'en_camino', label: '4. En Tránsito', color: 'bg-purple-100 text-purple-900 border-purple-300', icon: '🚚' },
+  { id: 'entregado', label: '5. Entregado / Conforme', color: 'bg-emerald-100 text-emerald-900 border-emerald-300', icon: '✅' },
+  { id: 'anulado', label: '6. Anulado', color: 'bg-red-100 text-red-900 border-red-300', icon: '🔴' }
 ];
 
 export default function PedidosPage() {
@@ -60,7 +60,7 @@ export default function PedidosPage() {
     cargarPedidos();
   }, []);
 
-  const cambiarEstadoPedido = async (id: number, nuevoEstado: string, guia = '', notasTexto = '') => {
+  const cambiarEstadoPedido = async (id: number, nuevoEstado: string, guia = '', notasTexto = '', contactoMedio = '') => {
     if (nuevoEstado === 'anulado') {
       if (!confirm('⚠️ Al anular este pedido, el stock reservado regresará automáticamente al inventario del almacén. ¿Deseas continuar?')) {
         return;
@@ -74,7 +74,8 @@ export default function PedidosPage() {
         body: JSON.stringify({
           estado: nuevoEstado,
           tracking_guia: guia,
-          notas_seguimiento: notasTexto
+          notas_seguimiento: notasTexto,
+          contacto_medio: contactoMedio
         })
       });
 
@@ -193,7 +194,7 @@ export default function PedidosPage() {
                     <p className="text-xs text-blue-600 font-bold flex items-center justify-between">
                       <span>📞 {p.celular}</span>
                       <button onClick={() => enviarNotificacionWhatsApp(p)} className="bg-green-100 hover:bg-green-200 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded-md transition">
-                        💬 Notificar
+                        💬 Contactar WhatsApp
                       </button>
                     </p>
                     <p className="text-xs text-gray-500 mt-1 line-clamp-2">📍 {p.direccion} ({p.distrito})</p>
@@ -201,7 +202,7 @@ export default function PedidosPage() {
 
                   {p.tracking_guia && (
                     <div className="bg-purple-50 border border-purple-200 text-purple-800 text-xs p-2 rounded-xl font-bold flex items-center gap-1">
-                      <span>🏷️ Guía: {p.tracking_guia}</span>
+                      <span>🏷️ Tracking/Guía: {p.tracking_guia}</span>
                     </div>
                   )}
 
@@ -239,27 +240,27 @@ export default function PedidosPage() {
                     </button>
 
                     {p.estado === 'ingresado' && (
-                      <button onClick={() => cambiarEstadoPedido(p.id, 'contactado')} className="col-span-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl transition">
-                        📞 Contactado
+                      <button onClick={() => cambiarEstadoPedido(p.id, 'en_proceso', '', 'Cliente contactado por vendedor', 'WhatsApp')} className="col-span-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition shadow-xs">
+                        👤 Tomar Pedido & Marcar Contactado
                       </button>
                     )}
-                    {p.estado === 'contactado' && (
-                      <button onClick={() => cambiarEstadoPedido(p.id, 'confirmado')} className="col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-xl transition">
-                        🟢 Confirmar Pedido
+                    {p.estado === 'en_proceso' && (
+                      <button onClick={() => cambiarEstadoPedido(p.id, 'logistica', '', 'Datos confirmados. Enviado a Logística para empaque.')} className="col-span-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl transition shadow-xs">
+                        📦 Confirmar & Enviar a Logística
                       </button>
                     )}
-                    {p.estado === 'confirmado' && (
-                      <button onClick={() => cambiarEstadoPedido(p.id, 'en_camino')} className="col-span-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 rounded-xl transition">
-                        🚚 Marcar En Camino / Despachado
+                    {p.estado === 'logistica' && (
+                      <button onClick={() => cambiarEstadoPedido(p.id, 'en_camino', p.region === 'lima' ? 'MOTORIZADO-LIMA' : 'SHALOM-AGENCIA', 'En ruta de entrega.')} className="col-span-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 rounded-xl transition shadow-xs">
+                        🚚 Despachar (En Tránsito)
                       </button>
                     )}
                     {p.estado === 'en_camino' && (
-                      <button onClick={() => cambiarEstadoPedido(p.id, 'entregado')} className="col-span-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-xl transition">
-                        ✅ Entregado & Cobrado
+                      <button onClick={() => cambiarEstadoPedido(p.id, 'entregado', '', 'Entregado y cobrado en puerta.')} className="col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl transition shadow-xs">
+                        ✅ Marcar Entregado & Conforme
                       </button>
                     )}
                     {p.estado !== 'anulado' && p.estado !== 'entregado' && (
-                      <button onClick={() => cambiarEstadoPedido(p.id, 'anulado')} className="col-span-2 bg-red-100 hover:bg-red-200 text-red-700 font-bold py-1.5 rounded-xl transition text-center">
+                      <button onClick={() => cambiarEstadoPedido(p.id, 'anulado')} className="col-span-2 bg-red-50 hover:bg-red-100 text-red-700 font-bold py-1.5 rounded-xl transition text-center border border-red-200">
                         🔴 Anular Pedido (Devuelve Stock)
                       </button>
                     )}
