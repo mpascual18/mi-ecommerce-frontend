@@ -81,7 +81,7 @@ export default function DirectOrderModal({
           total: totalFinal,
           costo_envio: costoEnvio,
           origen: 'landing_producto',
-          metodo_pago: 'Pago Contra Entrega (Pagar al Recibir)',
+          metodo_pago: 'contra_entrega',
           items: [
             {
               producto_id: productoId,
