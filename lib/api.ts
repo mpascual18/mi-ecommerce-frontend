@@ -10,7 +10,7 @@ export function getApiUrl(): string {
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
     if (host !== 'localhost' && host !== '127.0.0.1') {
-      return 'https://pyrstore-backend.up.railway.app';
+      return 'https://pyr-store-backend-production.up.railway.app';
     }
   }
   return 'http://localhost:4000';
