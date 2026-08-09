@@ -24,11 +24,26 @@ type DashboardData = {
   pedidosHoy: number;
 };
 
+type EtapaTiempo = {
+  id: string;
+  label: string;
+  promedioMinutos: number | null;
+  muestras: number;
+};
+
+function formatearDuracion(minutos: number): string {
+  if (minutos < 60) return `${Math.round(minutos)} min`;
+  const horas = minutos / 60;
+  if (horas < 24) return `${horas.toFixed(1)} h`;
+  return `${(horas / 24).toFixed(1)} días`;
+}
+
 const COLOR_MAP: Record<string, string> = Object.fromEntries(ESTADOS_PEDIDO.map((e) => [e.id, e.hex]));
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [cargando, setCargando] = useState(true);
+  const [tiempos, setTiempos] = useState<EtapaTiempo[]>([]);
 
   useEffect(() => {
     const cargarDashboard = async () => {
@@ -44,6 +59,11 @@ export default function DashboardPage() {
       }
     };
     cargarDashboard();
+
+    fetch(`${API_URL}/api/dashboard/tiempos`)
+      .then((r) => r.json())
+      .then((j) => setTiempos(Array.isArray(j.etapas) ? j.etapas : []))
+      .catch((err) => console.error('Error al cargar tiempos:', err));
   }, []);
 
   if (cargando || !data) {
@@ -288,6 +308,32 @@ export default function DashboardPage() {
           </div>
         </div>
 
+      </div>
+
+      {/* TIEMPOS PROMEDIO POR ETAPA */}
+      <div className="bg-white p-6 rounded-3xl shadow-xs border border-gray-200 space-y-4">
+        <div>
+          <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
+            <span>🕒 Tiempos Promedio por Etapa</span>
+          </h2>
+          <p className="text-xs text-gray-500">Calculado sobre el historial real de tickets que pasaron por cada etapa.</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {tiempos.map((etapa) => (
+            <div key={etapa.id} className="p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl space-y-1">
+              <span className="text-xs font-black text-slate-700 uppercase block">{etapa.label}</span>
+              {etapa.promedioMinutos !== null ? (
+                <>
+                  <p className="text-2xl font-black text-slate-900">{formatearDuracion(etapa.promedioMinutos)}</p>
+                  <span className="text-[11px] text-slate-500">Promedio sobre {etapa.muestras} ticket{etapa.muestras === 1 ? '' : 's'}</span>
+                </>
+              ) : (
+                <p className="text-xs text-slate-400 pt-1">Aún sin datos suficientes</p>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
     </div>

@@ -8,9 +8,13 @@ type PedidoLogistica = {
   id: number;
   cliente_nombre: string;
   celular: string;
+  documento?: string;
   direccion: string;
   distrito: string;
   provincia?: string;
+  departamento?: string;
+  referencia?: string;
+  ubicacion_maps?: string;
   region: 'lima' | 'provincia';
   origen: string;
   estado: EstadoPedido;
@@ -18,6 +22,9 @@ type PedidoLogistica = {
   metodo_pago: string;
   tracking_guia?: string;
   notas_seguimiento?: string;
+  empresa_logistica?: string;
+  agencia_nombre?: string;
+  agencia_direccion?: string;
   fecha: string;
 };
 
@@ -39,6 +46,7 @@ export default function LogisticaPage() {
   // Modal de ticket: detalle, notas y cambio manual de estado
   const [pedidoModal, setPedidoModal] = useState<PedidoLogistica | null>(null);
   const [notas, setNotas] = useState('');
+  const [historial, setHistorial] = useState<{ estado: string; fecha: string }[]>([]);
 
   // Modal de rotulado/despacho: imprime etiqueta y asigna guia/agencia
   const [etiquetaModal, setEtiquetaModal] = useState<PedidoLogistica | null>(null);
@@ -68,6 +76,11 @@ export default function LogisticaPage() {
   const abrirTicket = (p: PedidoLogistica) => {
     setPedidoModal(p);
     setNotas(p.notas_seguimiento || '');
+    setHistorial([]);
+    fetch(`${API_URL}/api/pedidos/${p.id}/historial`)
+      .then((r) => r.json())
+      .then((h) => setHistorial(Array.isArray(h) ? h : []))
+      .catch(() => {});
   };
 
   const cambiarEstado = async (id: number, nuevoEstado: string, guia = '', notasTexto = '') => {
@@ -185,7 +198,11 @@ export default function LogisticaPage() {
                   <div>
                     <h3 className="font-extrabold text-gray-900 text-sm">🎫 #{p.id} · {p.cliente_nombre}</h3>
                     <p className="text-xs text-blue-600 font-bold">📞 {p.celular}</p>
-                    <p className="text-xs text-gray-600 mt-1">📍 {p.direccion} ({p.distrito})</p>
+                    {p.region === 'provincia' && p.agencia_nombre ? (
+                      <p className="text-xs text-gray-600 mt-1">🚛 {p.agencia_nombre}<br />{p.agencia_direccion}</p>
+                    ) : (
+                      <p className="text-xs text-gray-600 mt-1">📍 {p.direccion} ({p.distrito})</p>
+                    )}
                   </div>
 
                   {p.tracking_guia && (
@@ -264,7 +281,23 @@ export default function LogisticaPage() {
             <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 space-y-1 text-xs">
               <p className="font-black text-sm text-gray-900">{pedidoModal.cliente_nombre}</p>
               <p className="text-blue-600 font-bold">📞 {pedidoModal.celular}</p>
-              <p className="text-gray-600">📍 {pedidoModal.direccion} ({pedidoModal.distrito}{pedidoModal.provincia ? `, ${pedidoModal.provincia}` : ''})</p>
+              {pedidoModal.documento && <p className="text-gray-500">DNI: <strong className="text-gray-700">{pedidoModal.documento}</strong></p>}
+              {pedidoModal.region === 'provincia' && pedidoModal.agencia_nombre ? (
+                <>
+                  <p className="text-gray-600">🚛 <strong>{pedidoModal.agencia_nombre}</strong></p>
+                  <p className="text-gray-600">📍 {pedidoModal.agencia_direccion}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-600">📍 {pedidoModal.direccion} ({pedidoModal.distrito}{pedidoModal.provincia ? `, ${pedidoModal.provincia}` : ''})</p>
+                  {pedidoModal.referencia && <p className="text-gray-500">Ref: {pedidoModal.referencia}</p>}
+                  {pedidoModal.ubicacion_maps && (
+                    <p className="text-gray-500">
+                      🗺️ <a href={pedidoModal.ubicacion_maps} target="_blank" rel="noreferrer" className="text-blue-600 underline break-all">{pedidoModal.ubicacion_maps}</a>
+                    </p>
+                  )}
+                </>
+              )}
               <p className="text-gray-500">Método de pago: <strong className="text-gray-700">{pedidoModal.metodo_pago}</strong></p>
               {pedidoModal.tracking_guia && <p className="text-gray-500">Guía: <strong className="text-gray-700">{pedidoModal.tracking_guia}</strong></p>}
               <p className="text-red-600 font-black text-sm pt-1">Total a cobrar: S/ {Number(pedidoModal.total).toFixed(2)}</p>
@@ -280,6 +313,26 @@ export default function LogisticaPage() {
                 className="w-full bg-gray-50 border rounded-xl p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
               ></textarea>
             </div>
+
+            {historial.length > 0 && (
+              <div className="space-y-1.5 text-[11px] bg-gray-50 border border-gray-100 rounded-2xl p-3">
+                <p className="font-bold text-gray-700 uppercase text-[10px]">🕒 Historial del Ticket</p>
+                {historial.map((h, i) => {
+                  const cfg = getEstadoConfig(h.estado);
+                  const prev = historial[i - 1];
+                  const elapsedMin = prev ? Math.round((new Date(h.fecha).getTime() - new Date(prev.fecha).getTime()) / 60000) : null;
+                  return (
+                    <div key={i} className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5"><span>{cfg.icon}</span><span className="font-bold text-gray-700">{cfg.label}</span></span>
+                      <span className="text-gray-400">
+                        {new Date(h.fecha).toLocaleString('es-PE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        {elapsedMin !== null && ` (+${elapsedMin} min)`}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 gap-2 pt-2 border-t text-xs">
               {pedidoModal.estado === 'logistica' && (
@@ -344,8 +397,19 @@ export default function LogisticaPage() {
               <div className="space-y-1">
                 <p><strong>DESTINATARIO:</strong> {etiquetaModal.cliente_nombre}</p>
                 <p><strong>TELÉFONO:</strong> {etiquetaModal.celular}</p>
-                <p><strong>DIRECCIÓN:</strong> {etiquetaModal.direccion}</p>
-                <p><strong>DISTRITO/CIUDAD:</strong> {etiquetaModal.distrito} ({etiquetaModal.region.toUpperCase()})</p>
+                {etiquetaModal.documento && <p><strong>DNI:</strong> {etiquetaModal.documento}</p>}
+                {etiquetaModal.region === 'provincia' && etiquetaModal.agencia_nombre ? (
+                  <>
+                    <p><strong>AGENCIA:</strong> {etiquetaModal.agencia_nombre}</p>
+                    <p><strong>DIRECCIÓN AGENCIA:</strong> {etiquetaModal.agencia_direccion}</p>
+                  </>
+                ) : (
+                  <>
+                    <p><strong>DIRECCIÓN:</strong> {etiquetaModal.direccion}</p>
+                    <p><strong>DISTRITO/CIUDAD:</strong> {etiquetaModal.distrito} ({etiquetaModal.region.toUpperCase()})</p>
+                    {etiquetaModal.referencia && <p><strong>REFERENCIA:</strong> {etiquetaModal.referencia}</p>}
+                  </>
+                )}
                 <p className="text-red-600 font-bold"><strong>MONTO A COBRAR:</strong> S/ {Number(etiquetaModal.total).toFixed(2)} ({etiquetaModal.metodo_pago.toUpperCase()})</p>
               </div>
             </div>
