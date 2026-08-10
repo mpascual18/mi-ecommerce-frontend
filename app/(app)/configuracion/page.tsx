@@ -28,8 +28,7 @@ export default function ConfiguracionPage() {
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState('');
 
-  // Estados Zoho Mail SMTP
-  const [zohoPassword, setZohoPassword] = useState('');
+  // Estados de prueba de correo (Resend)
   const [adminEmailTest, setAdminEmailTest] = useState('mpascual@pyr-store.com');
   const [probandoCorreo, setProbandoCorreo] = useState(false);
   const [resultadoPrueba, setResultadoPrueba] = useState('');
@@ -47,7 +46,6 @@ export default function ConfiguracionPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           emailDestino: adminEmailTest || 'mpascual@pyr-store.com',
-          zohoPassword: zohoPassword,
         }),
       });
 
@@ -55,7 +53,7 @@ export default function ConfiguracionPage() {
       if (res.ok && data.success) {
         setResultadoPrueba(data.message || '✅ Correo de prueba enviado exitosamente.');
       } else {
-        setResultadoPrueba(`❌ Error SMTP: ${data.error || 'No se pudo enviar el correo de prueba.'}`);
+        setResultadoPrueba(`❌ Error: ${data.error || 'No se pudo enviar el correo de prueba.'}`);
       }
     } catch (err: any) {
       setResultadoPrueba(`❌ Error de conexión: ${err.message || 'Error al conectar con servidor.'}`);
@@ -264,12 +262,12 @@ export default function ConfiguracionPage() {
               )}
             </div>
 
-            {/* ZOHO MAIL SMTP NOTIFICATIONS CARD */}
+            {/* NOTIFICACIONES POR CORREO (Resend, remitente info@pyr-store.com) */}
             <div className="border border-slate-200 p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 text-white space-y-3">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider block">CONFIGURACIÓN DE NOTIFICACIONES</span>
-                  <h4 className="font-heading font-black text-sm text-white">📩 Correo Corporativo Zoho Mail (info@pyr-store.com)</h4>
+                  <h4 className="font-heading font-black text-sm text-white">📩 Correo Corporativo (info@pyr-store.com)</h4>
                 </div>
                 <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-2.5 py-1 rounded-full uppercase">
                   info@pyr-store.com
@@ -277,22 +275,13 @@ export default function ConfiguracionPage() {
               </div>
 
               <p className="text-xs text-slate-300">
-                Cada nuevo pedido registrado en la web enviará una alerta instantánea desde <strong>info@pyr-store.com</strong> hacia <strong>mpascual@pyr-store.com</strong>.
+                Cada nuevo pedido, anulación y actualización de estado envía una alerta automática desde <strong>info@pyr-store.com</strong>.
+                La clave de envío (Resend) se configura directamente en Railway, no aquí.
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="grid grid-cols-1 gap-3 pt-1">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-300 mb-1">Clave de Aplicación Zoho Mail (info@pyr-store.com)</label>
-                  <input
-                    type="password"
-                    value={zohoPassword}
-                    onChange={(e) => setZohoPassword(e.target.value)}
-                    placeholder="Ingresa la clave de info@pyr-store.com"
-                    className="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-amber-400 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-300 mb-1">Correo Notificación Admin</label>
+                  <label className="block text-[11px] font-bold text-slate-300 mb-1">Enviar correo de prueba a</label>
                   <input
                     type="email"
                     value={adminEmailTest}
@@ -310,7 +299,7 @@ export default function ConfiguracionPage() {
                   disabled={probandoCorreo}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition flex items-center gap-1.5 shadow-md disabled:opacity-50"
                 >
-                  <span>{probandoCorreo ? '⌛ Enviando Prueba...' : '🧪 Enviar Correo de Prueba a Zoho Mail'}</span>
+                  <span>{probandoCorreo ? '⌛ Enviando Prueba...' : '🧪 Enviar Correo de Prueba'}</span>
                 </button>
               </div>
 

@@ -35,6 +35,7 @@ export default function DirectOrderModal({
   const [currentPromo, setCurrentPromo] = useState(promoElegida);
   const [nombre, setNombre] = useState('');
   const [celular, setCelular] = useState('');
+  const [correo, setCorreo] = useState('');
   const [distrito, setDistrito] = useState('');
   const [direccion, setDireccion] = useState('');
   const [referencia, setReferencia] = useState('');
@@ -75,6 +76,7 @@ export default function DirectOrderModal({
         body: JSON.stringify({
           nombre: nombre.trim(),
           celular: celular.trim(),
+          correo: correo.trim(),
           direccion: `${direccion.trim()} (Ref: ${referencia.trim() || 'Sin ref'})`,
           distrito: distrito.trim(),
           provincia: isLima ? 'Lima' : distrito.trim(),
@@ -230,6 +232,17 @@ export default function DirectOrderModal({
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
                   placeholder="Ej: Maria García"
+                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-3 focus:ring-2 focus:ring-red-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Correo (opcional, para seguir tu pedido)</label>
+                <input
+                  type="email"
+                  value={correo}
+                  onChange={(e) => setCorreo(e.target.value)}
+                  placeholder="Ej: maria@correo.com"
                   className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-3 focus:ring-2 focus:ring-red-600 focus:outline-none"
                 />
               </div>

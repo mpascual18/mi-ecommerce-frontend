@@ -351,6 +351,13 @@ function CartDrawer() {
                 onChange={(e) => setCheckoutForm({ ...checkoutForm, celular: e.target.value })}
                 className="w-full bg-white border border-slate-300 rounded-xl p-2.5"
               />
+              <input
+                type="email"
+                placeholder="Tu Correo (opcional, para seguir tu pedido)"
+                value={checkoutForm.correo}
+                onChange={(e) => setCheckoutForm({ ...checkoutForm, correo: e.target.value })}
+                className="w-full bg-white border border-slate-300 rounded-xl p-2.5"
+              />
               <div className="grid grid-cols-2 gap-2">
                 <select
                   value={checkoutForm.regionTipo}

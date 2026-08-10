@@ -11,6 +11,7 @@ type Pedido = {
   cliente_apellido?: string;
   celular: string;
   documento?: string;
+  correo?: string;
   direccion: string;
   distrito: string;
   provincia?: string;
@@ -36,6 +37,7 @@ type TicketForm = {
   apellido: string;
   celular: string;
   documento: string;
+  correo: string;
   region: 'lima' | 'provincia';
   distrito: string;
   direccion: string;
@@ -95,6 +97,7 @@ export default function PedidosPage() {
       apellido: p.cliente_apellido || '',
       celular: p.celular || '',
       documento: p.documento || '',
+      correo: p.correo || '',
       region: p.region || 'lima',
       distrito: p.region === 'lima' ? (p.distrito || '') : '',
       direccion: p.region === 'lima' ? (p.direccion || '') : '',
@@ -146,6 +149,7 @@ export default function PedidosPage() {
           apellido: form.apellido,
           celular: form.celular,
           documento: form.documento,
+          correo: form.correo,
           region: form.region,
           distrito: form.region === 'lima' ? form.distrito : cascada.distrito,
           direccion: form.region === 'lima' ? form.direccion : '',
@@ -446,6 +450,16 @@ export default function PedidosPage() {
                     className="w-full bg-gray-50 border rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-red-500"
                   />
                 </div>
+              </div>
+              <div>
+                <label className="block text-gray-500 mb-1">Correo (opcional, para enviarle el seguimiento de su pedido)</label>
+                <input
+                  type="email"
+                  value={form.correo}
+                  onChange={(e) => setForm({ ...form, correo: e.target.value })}
+                  placeholder="cliente@correo.com"
+                  className="w-full bg-gray-50 border rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
               </div>
             </div>
 

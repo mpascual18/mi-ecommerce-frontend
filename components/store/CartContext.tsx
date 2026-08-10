@@ -38,6 +38,7 @@ export type CartItem = {
 type CheckoutForm = {
   nombre: string;
   celular: string;
+  correo: string;
   distrito: string;
   direccion: string;
   regionTipo: 'lima' | 'provincia';
@@ -111,6 +112,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [checkoutForm, setCheckoutForm] = useState<CheckoutForm>({
     nombre: '',
     celular: '',
+    correo: '',
     distrito: '',
     direccion: '',
     regionTipo: 'lima',
@@ -165,7 +167,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   async function confirmarPedido() {
     if (cart.length === 0) return;
-    const { nombre, celular, distrito, direccion, regionTipo, metodoPago } = checkoutForm;
+    const { nombre, celular, correo, distrito, direccion, regionTipo, metodoPago } = checkoutForm;
     if (!nombre.trim() || !celular.trim() || !distrito.trim() || !direccion.trim()) {
       alert('Por favor completa nombre, celular, distrito/ciudad y dirección.');
       return;
@@ -184,6 +186,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({
           nombre,
           celular,
+          correo,
           direccion,
           distrito,
           provincia,
