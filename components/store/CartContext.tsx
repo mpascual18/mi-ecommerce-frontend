@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { API_URL } from '@/lib/api';
+import { trackMetaEvent, generarEventId, datosMetaParaPedido } from '@/lib/metaPixel';
 import { calcularEnvio } from './constants';
 
 export type HeroSlide = {
@@ -154,6 +155,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return [...prev, { ...item, qty }];
     });
     setCartOpen(true);
+    trackMetaEvent('AddToCart', {
+      content_name: item.title,
+      content_ids: [String(item.id)],
+      content_type: 'product',
+      value: item.price * qty,
+      currency: 'PEN',
+    });
   }
 
   function updateQty(id: number | string, delta: number) {
@@ -179,6 +187,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const totalConEnvio = totalCarrito + envio.costo;
 
     let registroExitoso = true;
+    const leadEventId = generarEventId();
+    const purchaseEventId = generarEventId();
     try {
       const res = await fetch(`${API_URL}/api/pedidos`, {
         method: 'POST',
@@ -194,6 +204,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
           origen: 'tienda_web',
           metodo_pago: metodoPago,
           items: cart.map((i) => ({ producto_id: i.id, cantidad: i.qty, precio_unitario: i.price })),
+          meta_lead_event_id: leadEventId,
+          meta_purchase_event_id: purchaseEventId,
+          ...datosMetaParaPedido(),
         }),
       });
       if (!res.ok) {
@@ -203,6 +216,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       registroExitoso = false;
       console.error('❌ No se pudo registrar el pedido en el CRM (quedará solo en WhatsApp):', err);
+    }
+
+    if (registroExitoso) {
+      const eventParams = { content_name: 'Pedido P&R Store', value: totalConEnvio, currency: 'PEN' };
+      trackMetaEvent('Lead', eventParams, leadEventId);
+      trackMetaEvent('Purchase', eventParams, purchaseEventId);
     }
 
     const itemsFormateados = cart.map((i) => `• ${i.title} (x${i.qty}) - ${soles(i.price * i.qty)}`).join('\n');

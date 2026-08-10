@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { API_URL } from '@/lib/api';
+import { trackMetaEvent } from '@/lib/metaPixel';
 import { useCart, soles } from './CartContext';
 import DirectOrderModal from './DirectOrderModal';
 import {
@@ -424,6 +425,13 @@ export default function ProductPage({ slug }: { slug: string }) {
             setProducto(data);
             const pUnit = precioDe(data);
             setSelectedPromo({ id: '1', name: '1 Unidad', price: pUnit });
+            trackMetaEvent('ViewContent', {
+              content_name: data.nombre,
+              content_ids: [String(data.id)],
+              content_type: 'product',
+              value: pUnit,
+              currency: 'PEN',
+            });
 
             setRelacionados(
               lista.filter((p: Producto) => String(p.id) !== String(data.id) && (p.categoria || 'General') === (data.categoria || 'General')).slice(0, 4)

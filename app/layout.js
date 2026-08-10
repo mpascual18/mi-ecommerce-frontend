@@ -1,4 +1,5 @@
 import "./globals.css";
+import MetaPixel from "@/components/MetaPixel";
 
 const SITE_URL = "https://www.pyr-store.com";
 const TITLE = "P&R Store | Calidad que te acompaña";
@@ -34,6 +35,7 @@ export default function RootLayout({ children }) {
         suppressHydrationWarning
         className="font-sans antialiased bg-gray-50 text-gray-900"
       >
+        <MetaPixel />
         {children}
       </body>
     </html>

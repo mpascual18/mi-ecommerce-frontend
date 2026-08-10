@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { API_URL } from '@/lib/api';
+import { trackMetaEvent, generarEventId, datosMetaParaPedido } from '@/lib/metaPixel';
 
 type Props = {
   productoNombre: string;
@@ -69,6 +70,8 @@ export default function DirectOrderModal({
 
     // 1. Guardar en PostgreSQL ERP
     let registroExitoso = true;
+    const leadEventId = generarEventId();
+    const purchaseEventId = generarEventId();
     try {
       const res = await fetch(`${API_URL}/api/pedidos`, {
         method: 'POST',
@@ -91,6 +94,9 @@ export default function DirectOrderModal({
               precio_unitario: currentPromo.price / (parseInt(currentPromo.id) || 1),
             },
           ],
+          meta_lead_event_id: leadEventId,
+          meta_purchase_event_id: purchaseEventId,
+          ...datosMetaParaPedido(),
         }),
       });
       if (!res.ok) {
@@ -102,20 +108,11 @@ export default function DirectOrderModal({
       console.error('❌ No se pudo registrar el pedido en el CRM (quedará solo en WhatsApp):', err);
     }
 
-    // 2. Disparar Meta Pixel Events
-    if (typeof window !== 'undefined' && (window as any).fbq) {
-      try {
-        (window as any).fbq('track', 'Lead', {
-          content_name: productoNombre,
-          value: totalFinal,
-          currency: 'PEN',
-        });
-        (window as any).fbq('track', 'Purchase', {
-          content_name: productoNombre,
-          value: totalFinal,
-          currency: 'PEN',
-        });
-      } catch (e) {}
+    // 2. Disparar Meta Pixel Events (solo si el pedido se registro de verdad)
+    if (registroExitoso) {
+      const eventParams = { content_name: productoNombre, value: totalFinal, currency: 'PEN' };
+      trackMetaEvent('Lead', eventParams, leadEventId);
+      trackMetaEvent('Purchase', eventParams, purchaseEventId);
     }
 
     // 3. Redirigir directamente al WhatsApp de la empresa
