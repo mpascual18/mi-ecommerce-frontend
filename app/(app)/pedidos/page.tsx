@@ -29,6 +29,10 @@ type Pedido = {
   agencia_envio_id?: number | null;
   agencia_nombre?: string;
   agencia_direccion?: string;
+  adelanto_monto?: number;
+  adelanto_comprobante?: string;
+  adelanto_confirmado?: boolean;
+  adelanto_fecha?: string;
   fecha: string;
 };
 
@@ -68,6 +72,16 @@ export default function PedidosPage() {
   const [agenciasLista, setAgenciasLista] = useState<Agencia[]>([]);
   const [historial, setHistorial] = useState<HistorialItem[]>([]);
   const [guardando, setGuardando] = useState(false);
+  const [montoAdelanto, setMontoAdelanto] = useState(20);
+  const [comprobantePreview, setComprobantePreview] = useState<string | null>(null);
+  const [subiendoAdelanto, setSubiendoAdelanto] = useState(false);
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/configuracion`)
+      .then((r) => r.json())
+      .then((c) => { if (c?.adelantoProvinciaMonto) setMontoAdelanto(Number(c.adelantoProvinciaMonto)); })
+      .catch(() => {});
+  }, []);
 
   const cargarPedidos = async () => {
     setCargando(true);
@@ -108,6 +122,7 @@ export default function PedidosPage() {
     setHistorial([]);
     setAgenciasLista([]);
     setCascada({ departamento: '', provincia: '', distrito: '', agenciaId: null });
+    setComprobantePreview(null);
 
     fetch(`${API_URL}/api/pedidos/${p.id}/historial`)
       .then((r) => r.json())
@@ -221,6 +236,61 @@ export default function PedidosPage() {
     window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
+  const seleccionarComprobante = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setComprobantePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const confirmarAdelanto = async () => {
+    if (!pedidoModal || !comprobantePreview) return;
+    setSubiendoAdelanto(true);
+    try {
+      const res = await fetch(`${API_URL}/api/pedidos/${pedidoModal.id}/adelanto`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comprobante: comprobantePreview, confirmado: true }),
+      });
+      const data = await res.json();
+      if (res.ok && data.pedido) {
+        setPedidoModal(data.pedido);
+        setComprobantePreview(null);
+        cargarPedidos();
+      } else {
+        alert(data.error || 'No se pudo confirmar el adelanto.');
+      }
+    } catch (err) {
+      console.error('Error al confirmar adelanto:', err);
+      alert('No se pudo confirmar el adelanto. Intenta de nuevo.');
+    } finally {
+      setSubiendoAdelanto(false);
+    }
+  };
+
+  const quitarConfirmacionAdelanto = async () => {
+    if (!pedidoModal) return;
+    if (!confirm('¿Quitar la confirmación de este adelanto? Tendrás que volver a confirmarlo antes de enviar a Logística.')) return;
+    setSubiendoAdelanto(true);
+    try {
+      const res = await fetch(`${API_URL}/api/pedidos/${pedidoModal.id}/adelanto`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comprobante: '', confirmado: false }),
+      });
+      const data = await res.json();
+      if (res.ok && data.pedido) {
+        setPedidoModal(data.pedido);
+        cargarPedidos();
+      }
+    } catch (err) {
+      console.error('Error al quitar confirmación de adelanto:', err);
+    } finally {
+      setSubiendoAdelanto(false);
+    }
+  };
+
   const buscarEnGoogleMaps = () => {
     if (!form) return;
     const query = `${form.direccion}, ${form.distrito}, Lima, Perú`;
@@ -249,7 +319,7 @@ export default function PedidosPage() {
     form.celular.trim() &&
     (form.region === 'lima'
       ? form.distrito.trim() && form.direccion.trim()
-      : form.empresa_logistica && cascada.agenciaId)
+      : form.empresa_logistica && cascada.agenciaId && pedidoModal?.adelanto_confirmado)
   );
 
   return (
@@ -353,6 +423,11 @@ export default function PedidosPage() {
                         ? `🚛 ${p.agencia_nombre}`
                         : `📍 ${p.direccion || 'Sin dirección aún'} ${p.distrito ? `(${p.distrito})` : ''}`}
                     </p>
+                    {p.region === 'provincia' && p.estado === 'en_proceso' && !p.adelanto_confirmado && (
+                      <p className="text-[10px] text-amber-700 font-bold bg-amber-50 border border-amber-200 rounded-md px-2 py-0.5 mt-1 inline-block">
+                        ⚠️ Falta confirmar adelanto
+                      </p>
+                    )}
                   </div>
 
                   {p.notas_seguimiento && (
@@ -626,6 +701,53 @@ export default function PedidosPage() {
                       placeholder="Ej: recoge en horario de tarde"
                       className="w-full bg-gray-50 border rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-red-500"
                     />
+                  </div>
+
+                  {/* ADELANTO DE DESPACHO (YAPE) */}
+                  <div className="border border-amber-200 bg-amber-50 rounded-xl p-3 space-y-2">
+                    <p className="font-bold text-amber-800 text-[11px] uppercase">💰 Adelanto de Despacho (S/ {montoAdelanto.toFixed(2)})</p>
+                    {pedidoModal.adelanto_confirmado ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3 bg-white border border-emerald-200 rounded-xl p-2.5">
+                          {pedidoModal.adelanto_comprobante && (
+                            <img src={pedidoModal.adelanto_comprobante} alt="Comprobante Yape" className="w-14 h-14 object-cover rounded-lg border" />
+                          )}
+                          <div className="flex-1">
+                            <p className="text-emerald-700 font-bold">✅ Adelanto confirmado: S/ {Number(pedidoModal.adelanto_monto || 0).toFixed(2)}</p>
+                            <p className="text-gray-500">Saldo a cobrar en agencia: <strong className="text-gray-800">S/ {(Number(pedidoModal.total) - Number(pedidoModal.adelanto_monto || 0)).toFixed(2)}</strong></p>
+                            {pedidoModal.adelanto_fecha && (
+                              <p className="text-gray-400 text-[10px]">{new Date(pedidoModal.adelanto_fecha).toLocaleString('es-PE')}</p>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={quitarConfirmacionAdelanto}
+                          disabled={subiendoAdelanto}
+                          className="text-red-600 font-bold underline disabled:opacity-50"
+                        >
+                          Quitar confirmación (me equivoqué)
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-amber-700">Sube la captura del Yape del cliente y confirma para descontar el adelanto del saldo a cobrar en agencia.</p>
+                        <input type="file" accept="image/*" onChange={seleccionarComprobante} className="text-[11px]" />
+                        {comprobantePreview && (
+                          <div className="flex items-center gap-3">
+                            <img src={comprobantePreview} alt="Vista previa del comprobante" className="w-16 h-16 object-cover rounded-lg border" />
+                            <button
+                              type="button"
+                              onClick={confirmarAdelanto}
+                              disabled={subiendoAdelanto}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3 rounded-xl transition disabled:opacity-50"
+                            >
+                              {subiendoAdelanto ? 'Confirmando...' : '✅ Confirmar Adelanto Recibido'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
