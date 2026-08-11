@@ -11,7 +11,21 @@ type ConfigData = {
   logoUrl: string;
   umbralEnvioGratis?: number;
   costoEnvioFijo?: number;
+  alertasAdminEmails: string[];
+  alertasPedidoNuevoActiva: boolean;
+  alertasPedidoAnuladoActiva: boolean;
+  alertasReporteDiarioActiva: boolean;
+  alertasReporteQuincenalActiva: boolean;
+  alertasReporteMensualActiva: boolean;
+  alertasClienteEstados: string[];
 };
+
+const GRUPOS_ESTADOS_CLIENTE: { label: string; estados: string[]; recomendado: string }[] = [
+  { label: 'Contactado (confirmación de pedido)', estados: ['en_proceso'], recomendado: 'Recomendado mantenerlo' },
+  { label: 'En logística / Empacado', estados: ['logistica', 'empacado'], recomendado: 'Estados internos de almacén' },
+  { label: 'En camino (con guía de rastreo)', estados: ['en_camino'], recomendado: 'El más valioso para el cliente' },
+  { label: 'Entregado / Anulado', estados: ['entregado', 'anulado'], recomendado: 'Cierre del pedido' },
+];
 
 export default function ConfiguracionPage() {
   const [config, setConfig] = useState<ConfigData>({
@@ -22,11 +36,19 @@ export default function ConfiguracionPage() {
     logoUrl: '',
     umbralEnvioGratis: 30,
     costoEnvioFijo: 15,
+    alertasAdminEmails: ['mpascual@pyr-store.com'],
+    alertasPedidoNuevoActiva: true,
+    alertasPedidoAnuladoActiva: true,
+    alertasReporteDiarioActiva: true,
+    alertasReporteQuincenalActiva: true,
+    alertasReporteMensualActiva: true,
+    alertasClienteEstados: ['en_proceso', 'en_camino', 'entregado', 'anulado'],
   });
 
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState('');
+  const [nuevoCorreoAlerta, setNuevoCorreoAlerta] = useState('');
 
   // Estados de prueba de correo (Resend)
   const [adminEmailTest, setAdminEmailTest] = useState('mpascual@pyr-store.com');
@@ -68,11 +90,14 @@ export default function ConfiguracionPage() {
       const res = await fetch(`${API_URL}/api/configuracion`);
       const data = await res.json();
       if (data) {
-        setConfig({
+        setConfig((prev) => ({
+          ...prev,
           ...data,
           umbralEnvioGratis: data.umbralEnvioGratis !== undefined ? Number(data.umbralEnvioGratis) : 30,
           costoEnvioFijo: data.costoEnvioFijo !== undefined ? Number(data.costoEnvioFijo) : 15,
-        });
+          alertasAdminEmails: Array.isArray(data.alertasAdminEmails) && data.alertasAdminEmails.length > 0 ? data.alertasAdminEmails : prev.alertasAdminEmails,
+          alertasClienteEstados: Array.isArray(data.alertasClienteEstados) ? data.alertasClienteEstados : prev.alertasClienteEstados,
+        }));
       }
     } catch (err) {
       console.error('Error al cargar configuración:', err);
@@ -91,6 +116,37 @@ export default function ConfiguracionPage() {
       setConfig((prev) => ({ ...prev, logoUrl: base64 }));
     };
     reader.readAsDataURL(file);
+  };
+
+  const agregarCorreoAlerta = () => {
+    const correo = nuevoCorreoAlerta.trim().toLowerCase();
+    if (!correo || !correo.includes('@')) return;
+    if (config.alertasAdminEmails.includes(correo)) {
+      setNuevoCorreoAlerta('');
+      return;
+    }
+    setConfig({ ...config, alertasAdminEmails: [...config.alertasAdminEmails, correo] });
+    setNuevoCorreoAlerta('');
+  };
+
+  const quitarCorreoAlerta = (correo: string) => {
+    if (config.alertasAdminEmails.length <= 1) {
+      alert('Debe quedar al menos un correo para recibir las alertas.');
+      return;
+    }
+    setConfig({ ...config, alertasAdminEmails: config.alertasAdminEmails.filter((c) => c !== correo) });
+  };
+
+  const grupoEstadoActivo = (estados: string[]) => estados.every((e) => config.alertasClienteEstados.includes(e));
+
+  const toggleGrupoEstado = (estados: string[]) => {
+    const activo = grupoEstadoActivo(estados);
+    setConfig({
+      ...config,
+      alertasClienteEstados: activo
+        ? config.alertasClienteEstados.filter((e) => !estados.includes(e))
+        : [...config.alertasClienteEstados, ...estados.filter((e) => !config.alertasClienteEstados.includes(e))],
+    });
   };
 
   const handleGuardar = async (e: React.FormEvent) => {
@@ -279,7 +335,82 @@ export default function ConfiguracionPage() {
                 La clave de envío (Resend) se configura directamente en Railway, no aquí.
               </p>
 
-              <div className="grid grid-cols-1 gap-3 pt-1">
+              {/* DESTINATARIOS DE LAS ALERTAS DE ADMIN */}
+              <div className="pt-2 border-t border-slate-800 space-y-2">
+                <label className="block text-[11px] font-bold text-slate-300 uppercase">Correos que reciben las alertas (pedido nuevo, anulado, reportes)</label>
+                <div className="flex flex-wrap gap-2">
+                  {config.alertasAdminEmails.map((correo) => (
+                    <span key={correo} className="bg-slate-800 border border-slate-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-full flex items-center gap-2">
+                      {correo}
+                      <button type="button" onClick={() => quitarCorreoAlerta(correo)} className="text-slate-400 hover:text-red-400">✕</button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    value={nuevoCorreoAlerta}
+                    onChange={(e) => setNuevoCorreoAlerta(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); agregarCorreoAlerta(); } }}
+                    placeholder="nuevo-correo@pyr-store.com"
+                    className="flex-1 bg-slate-800 border border-slate-700 text-white rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={agregarCorreoAlerta}
+                    className="bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs px-4 rounded-xl transition"
+                  >
+                    + Agregar
+                  </button>
+                </div>
+              </div>
+
+              {/* QUE ALERTAS DE ADMIN ESTAN ACTIVAS */}
+              <div className="pt-2 border-t border-slate-800 space-y-2">
+                <label className="block text-[11px] font-bold text-slate-300 uppercase">Alertas activas para ti</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  {[
+                    { key: 'alertasPedidoNuevoActiva' as const, label: '🚨 Pedido nuevo' },
+                    { key: 'alertasPedidoAnuladoActiva' as const, label: '🔴 Pedido anulado' },
+                    { key: 'alertasReporteDiarioActiva' as const, label: '📊 Reporte diario' },
+                    { key: 'alertasReporteQuincenalActiva' as const, label: '📊 Reporte quincenal' },
+                    { key: 'alertasReporteMensualActiva' as const, label: '📊 Reporte mensual' },
+                  ].map((item) => (
+                    <label key={item.key} className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-xl p-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={config[item.key]}
+                        onChange={(e) => setConfig({ ...config, [item.key]: e.target.checked })}
+                        className="accent-amber-400"
+                      />
+                      <span className="font-bold">{item.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* QUE ESTADOS NOTIFICAN AL CLIENTE */}
+              <div className="pt-2 border-t border-slate-800 space-y-2">
+                <label className="block text-[11px] font-bold text-slate-300 uppercase">Qué le llega por correo al cliente</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  {GRUPOS_ESTADOS_CLIENTE.map((grupo) => (
+                    <label key={grupo.label} className="flex items-start gap-2 bg-slate-800 border border-slate-700 rounded-xl p-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={grupoEstadoActivo(grupo.estados)}
+                        onChange={() => toggleGrupoEstado(grupo.estados)}
+                        className="accent-amber-400 mt-0.5"
+                      />
+                      <span>
+                        <span className="font-bold block">{grupo.label}</span>
+                        <span className="text-slate-400 text-[10px]">{grupo.recomendado}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 pt-2 border-t border-slate-800">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-300 mb-1">Enviar correo de prueba a</label>
                   <input
