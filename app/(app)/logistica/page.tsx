@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
 import { ESTADOS_LOGISTICA, EstadoPedido, getEstadoConfig } from '@/lib/estadosPedido';
 
 type PedidoLogistica = {
@@ -56,7 +56,7 @@ export default function LogisticaPage() {
   const cargarPedidos = async () => {
     setCargando(true);
     try {
-      const res = await fetch(`${API_URL}/api/pedidos`);
+      const res = await apiFetch(`${API_URL}/api/pedidos`);
       const data = await res.json();
       // Logistica solo ve tickets que Ventas ya envio (o que se resolvieron aqui mismo).
       const soloLogistica = Array.isArray(data) ? data.filter((p: PedidoLogistica) => ESTADOS_LOGISTICA.includes(p.estado)) : [];
@@ -77,7 +77,7 @@ export default function LogisticaPage() {
     setPedidoModal(p);
     setNotas(p.notas_seguimiento || '');
     setHistorial([]);
-    fetch(`${API_URL}/api/pedidos/${p.id}/historial`)
+    apiFetch(`${API_URL}/api/pedidos/${p.id}/historial`)
       .then((r) => r.json())
       .then((h) => setHistorial(Array.isArray(h) ? h : []))
       .catch(() => {});
@@ -91,7 +91,7 @@ export default function LogisticaPage() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/api/pedidos/${id}/estado`, {
+      const res = await apiFetch(`${API_URL}/api/pedidos/${id}/estado`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

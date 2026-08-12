@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
 
 type AdminOverview = {
   totalUsuarios: number;
@@ -19,8 +19,8 @@ export default function SuperAdminPage() {
       setCargando(true);
       try {
         const [resDash, resUsers] = await Promise.all([
-          fetch(`${API_URL}/api/dashboard/kpis`),
-          fetch(`${API_URL}/api/auth/usuarios`)
+          apiFetch(`${API_URL}/api/dashboard/kpis`),
+          apiFetch(`${API_URL}/api/auth/usuarios`)
         ]);
         const dashData = await resDash.json();
         const usersData = await resUsers.json();

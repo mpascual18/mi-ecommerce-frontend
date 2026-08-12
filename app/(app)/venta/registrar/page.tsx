@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Button from '@/components/ui/Button';
 import { useToast } from '@/components/ui/ToastProvider';
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
 
 type Producto = { id: number; nombre: string; sku: string; price_soles: number; stock: number };
 type ProductoSeleccionado = { id: number; nombre: string; sku: string; price_soles: number; cantidad: number };
@@ -30,7 +30,7 @@ export default function RegistrarVentaPage() {
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/productos`)
+    apiFetch(`${API_URL}/api/productos`)
       .then((res) => res.json())
       .then((data) => setProductos(data))
       .catch((err) => console.error('Error al cargar productos:', err));
@@ -87,7 +87,7 @@ export default function RegistrarVentaPage() {
     setEnviando(true);
     try {
       // 1) Crear (o encontrar) el cliente para obtener su id.
-      const resCliente = await fetch(`${API_URL}/api/clientes`, {
+      const resCliente = await apiFetch(`${API_URL}/api/clientes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(cliente),
@@ -102,7 +102,7 @@ export default function RegistrarVentaPage() {
       const { cliente: clienteCreado } = await resCliente.json();
 
       // 2) Registrar la venta con el total calculado y los items del carrito.
-      const resVenta = await fetch(`${API_URL}/api/ventas`, {
+      const resVenta = await apiFetch(`${API_URL}/api/ventas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -127,7 +127,7 @@ export default function RegistrarVentaPage() {
       const nuevaVenta = await resVenta.json();
 
       // 3) Descargar la boleta en PDF de la venta recién creada.
-      const resPdf = await fetch(`${API_URL}/api/ventas/${nuevaVenta.id}/pdf`);
+      const resPdf = await apiFetch(`${API_URL}/api/ventas/${nuevaVenta.id}/pdf`);
       if (resPdf.ok) {
         const blob = await resPdf.blob();
         const url = window.URL.createObjectURL(blob);

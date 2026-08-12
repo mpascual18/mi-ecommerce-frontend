@@ -19,7 +19,6 @@ export default function LoginPage() {
   const [nuevaPassword, setNuevaPassword] = useState('');
   const [mensajeReset, setMensajeReset] = useState('');
   const [cargandoReset, setCargandoReset] = useState(false);
-  const [codigoGeneradoDemo, setCodigoGeneradoDemo] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +38,7 @@ export default function LoginPage() {
 
       if (res.ok && data.success) {
         localStorage.setItem('pyr_user', JSON.stringify(data.user));
+        localStorage.setItem('pyr_token', data.token);
         // Redirigir según el primer módulo permitido
         const modulos = Array.isArray(data.user.modulos) ? data.user.modulos : [];
         if (cleanEmail === 'mpascual@pyr-store.com' || data.user.rol === 'superadmin') {
@@ -51,28 +51,14 @@ export default function LoginPage() {
         }
         return;
       }
+
+      setError(data.error || 'Correo no registrado o contraseña incorrecta.');
     } catch (err) {
       console.warn('⚠️ No se pudo contactar backend API:', err);
-    }
-
-    // FALLBACK DE SEGURIDAD PARA SUPERADMIN Y ACCESOS CONFIGURADOS
-    if (cleanEmail === 'mpascual@pyr-store.com' && password === '$abc1234') {
-      const fallbackUser = {
-        id: 1,
-        nombre: 'Marco Pascual',
-        correo: 'mpascual@pyr-store.com',
-        rol: 'superadmin',
-        estado: 'activo',
-        modulos: ['dashboard', 'pedidos', 'logistica', 'editor', 'metricas', 'inventario', 'venta', 'clientes', 'usuarios', 'configuracion'],
-      };
-      localStorage.setItem('pyr_user', JSON.stringify(fallbackUser));
+      setError('No se pudo conectar con el servidor. Intenta nuevamente.');
+    } finally {
       setCargando(false);
-      router.push('/dashboard');
-      return;
     }
-
-    setError('Correo no registrado o contraseña incorrecta. Ingresa tu correo corporativo (@pyr-store.com) y tu clave válida.');
-    setCargando(false);
   };
 
   const handleSolicitarCodigo = async (e: React.FormEvent) => {
@@ -90,18 +76,13 @@ export default function LoginPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setMensajeReset(data.mensaje || 'Código de 6 dígitos enviado.');
-        if (data.codigoDemo) setCodigoGeneradoDemo(data.codigoDemo);
+        setMensajeReset(data.mensaje || 'Si tu correo está registrado, te enviamos un código de 6 dígitos.');
         setPasoReset(2);
       } else {
         setMensajeReset(`❌ Error: ${data.error || 'No se pudo enviar el código.'}`);
       }
     } catch (err) {
-      // Fallback local si el backend no responde
-      const codigoSimulado = Math.floor(100000 + Math.random() * 900000).toString();
-      setCodigoGeneradoDemo(codigoSimulado);
-      setMensajeReset(`🔐 Código de confirmación de 6 dígitos enviado a ${cleanEmail}`);
-      setPasoReset(2);
+      setMensajeReset('❌ No se pudo conectar con el servidor. Intenta nuevamente.');
     } finally {
       setCargandoReset(false);
     }
@@ -136,15 +117,7 @@ export default function LoginPage() {
         setMensajeReset(`❌ Error: ${data.error || 'Código incorrecto'}`);
       }
     } catch (err) {
-      if (codigoIngresado.trim() === codigoGeneradoDemo || codigoIngresado.trim() === '999999') {
-        alert('✅ ¡Contraseña restablecida exitosamente!');
-        setModalResetOpen(false);
-        setPasoReset(1);
-        setCorreo(cleanEmail);
-        setPassword(nuevaPassword);
-      } else {
-        setMensajeReset('❌ Código de 6 dígitos inválido.');
-      }
+      setMensajeReset('❌ No se pudo conectar con el servidor. Intenta nuevamente.');
     } finally {
       setCargandoReset(false);
     }
@@ -250,11 +223,6 @@ export default function LoginPage() {
             {mensajeReset && (
               <div className="p-3 bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs rounded-xl font-bold">
                 {mensajeReset}
-                {codigoGeneradoDemo && (
-                  <div className="mt-1 pt-1 border-t border-amber-400/30 text-[11px] text-white">
-                    🔑 Tu Código de Confirmación de 6 dígitos es: <strong className="text-amber-300 font-mono text-sm px-1.5 py-0.5 bg-slate-950 rounded">{codigoGeneradoDemo}</strong>
-                  </div>
-                )}
               </div>
             )}
 

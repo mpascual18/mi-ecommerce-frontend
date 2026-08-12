@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
 import { ESTADOS_PEDIDO, ESTADOS_VENTA, EstadoPedido, getEstadoConfig } from '@/lib/estadosPedido';
 import { Agencia, getAgencias, valoresUnicos } from '@/lib/agencias';
 
@@ -77,7 +77,7 @@ export default function PedidosPage() {
   const [subiendoAdelanto, setSubiendoAdelanto] = useState(false);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/configuracion`)
+    apiFetch(`${API_URL}/api/configuracion`)
       .then((r) => r.json())
       .then((c) => { if (c?.adelantoProvinciaMonto) setMontoAdelanto(Number(c.adelantoProvinciaMonto)); })
       .catch(() => {});
@@ -86,7 +86,7 @@ export default function PedidosPage() {
   const cargarPedidos = async () => {
     setCargando(true);
     try {
-      const res = await fetch(`${API_URL}/api/pedidos`);
+      const res = await apiFetch(`${API_URL}/api/pedidos`);
       const data = await res.json();
       // Ventas solo ve su propia bandeja de trabajo (ingresado / en_proceso).
       const soloVenta = Array.isArray(data) ? data.filter((p: Pedido) => ESTADOS_VENTA.includes(p.estado)) : [];
@@ -124,7 +124,7 @@ export default function PedidosPage() {
     setCascada({ departamento: '', provincia: '', distrito: '', agenciaId: null });
     setComprobantePreview(null);
 
-    fetch(`${API_URL}/api/pedidos/${p.id}/historial`)
+    apiFetch(`${API_URL}/api/pedidos/${p.id}/historial`)
       .then((r) => r.json())
       .then((h) => setHistorial(Array.isArray(h) ? h : []))
       .catch(() => {});
@@ -156,7 +156,7 @@ export default function PedidosPage() {
     if (!form) return false;
     setGuardando(true);
     try {
-      const res = await fetch(`${API_URL}/api/pedidos/${id}`, {
+      const res = await apiFetch(`${API_URL}/api/pedidos/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -194,7 +194,7 @@ export default function PedidosPage() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/api/pedidos/${id}/estado`, {
+      const res = await apiFetch(`${API_URL}/api/pedidos/${id}/estado`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -248,7 +248,7 @@ export default function PedidosPage() {
     if (!pedidoModal || !comprobantePreview) return;
     setSubiendoAdelanto(true);
     try {
-      const res = await fetch(`${API_URL}/api/pedidos/${pedidoModal.id}/adelanto`, {
+      const res = await apiFetch(`${API_URL}/api/pedidos/${pedidoModal.id}/adelanto`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ comprobante: comprobantePreview, confirmado: true }),
@@ -274,7 +274,7 @@ export default function PedidosPage() {
     if (!confirm('¿Quitar la confirmación de este adelanto? Tendrás que volver a confirmarlo antes de enviar a Logística.')) return;
     setSubiendoAdelanto(true);
     try {
-      const res = await fetch(`${API_URL}/api/pedidos/${pedidoModal.id}/adelanto`, {
+      const res = await apiFetch(`${API_URL}/api/pedidos/${pedidoModal.id}/adelanto`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ comprobante: '', confirmado: false }),

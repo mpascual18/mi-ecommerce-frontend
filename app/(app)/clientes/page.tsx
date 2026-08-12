@@ -6,7 +6,7 @@ import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import FormField from '@/components/ui/FormField';
 import { useToast } from '@/components/ui/ToastProvider';
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
 
 type Cliente = {
   id: number;
@@ -51,7 +51,7 @@ export default function ClientesPage() {
   const obtenerClientes = async () => {
     setCargando(true);
     try {
-      const res = await fetch(`${API_URL}/api/clientes`);
+      const res = await apiFetch(`${API_URL}/api/clientes`);
       const data = await res.json();
       setClientes(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -71,7 +71,7 @@ export default function ClientesPage() {
   const registrarCliente = async () => {
     setRegistrando(true);
     try {
-      const res = await fetch(`${API_URL}/api/clientes`, {
+      const res = await apiFetch(`${API_URL}/api/clientes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(nuevoCliente),

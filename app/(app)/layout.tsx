@@ -27,7 +27,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const stored = localStorage.getItem('pyr_user');
-      if (!stored) {
+      const token = localStorage.getItem('pyr_token');
+      if (!stored || !token) {
         router.replace('/login');
         return;
       }

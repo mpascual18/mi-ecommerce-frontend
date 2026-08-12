@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
 
 type Usuario = {
   id: number;
@@ -39,7 +39,7 @@ export default function UsuariosPage() {
   const cargarUsuarios = async () => {
     setCargando(true);
     try {
-      const res = await fetch(`${API_URL}/api/auth/usuarios`);
+      const res = await apiFetch(`${API_URL}/api/auth/usuarios`);
       const data = await res.json();
       setUsuarios(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -67,7 +67,7 @@ export default function UsuariosPage() {
     const isSuperadmin = cleanEmail === 'mpascual@pyr-store.com' || rol === 'superadmin';
 
     try {
-      const res = await fetch(`${API_URL}/api/auth/usuarios`, {
+      const res = await apiFetch(`${API_URL}/api/auth/usuarios`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -272,16 +272,16 @@ export default function UsuariosPage() {
                           <td className="p-4">
                             <button
                               onClick={() => {
-                                const nueva = prompt(`🔐 Ingrese nueva contraseña para ${u.correo}:`);
+                                const nueva = prompt(`🔐 Ingrese nueva contraseña para ${u.correo} (mínimo 8 caracteres):`);
                                 if (nueva && nueva.trim()) {
-                                  fetch(`${API_URL}/api/auth/cambiar-password-codigo`, {
-                                    method: 'POST',
+                                  apiFetch(`${API_URL}/api/auth/usuarios/${u.id}`, {
+                                    method: 'PUT',
                                     headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ correo: u.correo, codigo: '999999', nuevaPassword: nueva.trim() }),
+                                    body: JSON.stringify({ password: nueva.trim() }),
                                   })
                                     .then((r) => r.json())
-                                    .then((data) => alert(data.mensaje || 'Contraseña actualizada.'))
-                                    .catch(() => alert('Contraseña actualizada en el sistema.'));
+                                    .then((data) => alert(data.error ? `❌ ${data.error}` : 'Contraseña actualizada.'))
+                                    .catch(() => alert('❌ No se pudo actualizar la contraseña.'));
                                 }
                               }}
                               className="text-[10px] font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg border border-red-200 transition"

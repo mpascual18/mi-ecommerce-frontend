@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
 
 type VendedorMeta = {
   vendedor: string;
@@ -18,7 +18,7 @@ export default function VendedoresWorkspacePage() {
     const cargarDatosVendedor = async () => {
       setCargando(true);
       try {
-        const res = await fetch(`${API_URL}/api/pedidos`);
+        const res = await apiFetch(`${API_URL}/api/pedidos`);
         const pedidos = await res.json();
         
         if (Array.isArray(pedidos)) {

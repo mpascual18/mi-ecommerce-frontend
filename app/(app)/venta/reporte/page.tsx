@@ -6,7 +6,7 @@ import { saveAs } from 'file-saver';
 import DataTable from '@/components/ui/DataTable';
 import Button from '@/components/ui/Button';
 import { useToast } from '@/components/ui/ToastProvider';
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
 
 type Venta = {
   id: number;
@@ -26,7 +26,7 @@ export default function ReporteVentasPage() {
     const cargar = async () => {
       setCargando(true);
       try {
-        const res = await fetch(`${API_URL}/api/ventas`);
+        const res = await apiFetch(`${API_URL}/api/ventas`);
         setVentas(await res.json());
       } catch (err) {
         console.error('Error al cargar ventas:', err);

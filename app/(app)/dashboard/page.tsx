@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
 import Link from 'next/link';
 import {
   ResponsiveContainer,
@@ -49,7 +49,7 @@ export default function DashboardPage() {
     const cargarDashboard = async () => {
       setCargando(true);
       try {
-        const res = await fetch(`${API_URL}/api/dashboard/kpis`);
+        const res = await apiFetch(`${API_URL}/api/dashboard/kpis`);
         const json = await res.json();
         setData(json);
       } catch (err) {
@@ -60,7 +60,7 @@ export default function DashboardPage() {
     };
     cargarDashboard();
 
-    fetch(`${API_URL}/api/dashboard/tiempos`)
+    apiFetch(`${API_URL}/api/dashboard/tiempos`)
       .then((r) => r.json())
       .then((j) => setTiempos(Array.isArray(j.etapas) ? j.etapas : []))
       .catch((err) => console.error('Error al cargar tiempos:', err));

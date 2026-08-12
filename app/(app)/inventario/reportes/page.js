@@ -5,7 +5,7 @@ import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 import EmptyState from '@/components/ui/EmptyState';
 import { useToast } from '@/components/ui/ToastProvider';
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
 
 export default function ReporteInventarioPage() {
   const toast = useToast();
@@ -17,7 +17,7 @@ export default function ReporteInventarioPage() {
     const obtener = async () => {
       setCargando(true);
       try {
-        const res = await fetch(`${API_URL}/api/productos`);
+        const res = await apiFetch(`${API_URL}/api/productos`);
         setProductos(await res.json());
       } catch (error) {
         console.error('Error al obtener productos:', error);

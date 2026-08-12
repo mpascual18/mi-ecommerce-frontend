@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
 
 type ConfigData = {
   whatsappNumber: string;
@@ -63,7 +63,7 @@ export default function ConfiguracionPage() {
     setProbandoCorreo(true);
     setResultadoPrueba('');
     try {
-      const res = await fetch(`${API_URL}/api/configuracion/probar-correo`, {
+      const res = await apiFetch(`${API_URL}/api/configuracion/probar-correo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -87,7 +87,7 @@ export default function ConfiguracionPage() {
   const cargarConfig = async () => {
     setCargando(true);
     try {
-      const res = await fetch(`${API_URL}/api/configuracion`);
+      const res = await apiFetch(`${API_URL}/api/configuracion`);
       const data = await res.json();
       if (data) {
         setConfig((prev) => ({
@@ -155,7 +155,7 @@ export default function ConfiguracionPage() {
     setMensaje('');
 
     try {
-      const res = await fetch(`${API_URL}/api/configuracion`, {
+      const res = await apiFetch(`${API_URL}/api/configuracion`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config),

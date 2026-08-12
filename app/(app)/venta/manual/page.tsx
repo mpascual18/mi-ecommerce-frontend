@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Button from '@/components/ui/Button';
 import FormField from '@/components/ui/FormField';
 import { useToast } from '@/components/ui/ToastProvider';
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
 
 type ProductoManual = {
   nombre: string;
@@ -52,7 +52,7 @@ export default function Page() {
   const registrarBoleta = async () => {
     setEnviando(true);
     try {
-      const response = await fetch(`${API_URL}/api/ventas/manual`, {
+      const response = await apiFetch(`${API_URL}/api/ventas/manual`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cliente, productos }),

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import DataTable from '@/components/ui/DataTable';
 import { useToast } from '@/components/ui/ToastProvider';
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
 
 type Venta = {
   id: number;
@@ -25,7 +25,7 @@ export default function HistorialVentasPage() {
     const cargar = async () => {
       setCargando(true);
       try {
-        const res = await fetch(`${API_URL}/api/ventas`);
+        const res = await apiFetch(`${API_URL}/api/ventas`);
         setVentas(await res.json());
       } catch (err) {
         console.error('Error al cargar historial:', err);
@@ -49,7 +49,7 @@ export default function HistorialVentasPage() {
   const descargarBoleta = async (ventaId: number) => {
     setDescargando(ventaId);
     try {
-      const res = await fetch(`${API_URL}/api/ventas/${ventaId}/pdf`);
+      const res = await apiFetch(`${API_URL}/api/ventas/${ventaId}/pdf`);
       if (!res.ok) throw new Error('No se pudo descargar la boleta');
 
       const blob = await res.blob();

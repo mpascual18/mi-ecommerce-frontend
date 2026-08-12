@@ -7,7 +7,7 @@ import Button from '@/components/ui/Button';
 import FormField from '@/components/ui/FormField';
 import { useToast } from '@/components/ui/ToastProvider';
 import { useConfirm } from '@/components/ui/ConfirmDialogProvider';
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
 
 type Vendedor = {
   id: number;
@@ -42,7 +42,7 @@ export default function VendedoresPage() {
   const cargarVendedores = async () => {
     setCargando(true);
     try {
-      const res = await fetch(`${API_URL}/api/vendedores`);
+      const res = await apiFetch(`${API_URL}/api/vendedores`);
       setVendedores(await res.json());
     } catch (err) {
       console.error('Error al cargar vendedores:', err);
@@ -66,7 +66,7 @@ export default function VendedoresPage() {
     if (!confirmado) return;
 
     try {
-      const res = await fetch(`${API_URL}/api/vendedores/${codigo}`, { method: 'DELETE' });
+      const res = await apiFetch(`${API_URL}/api/vendedores/${codigo}`, { method: 'DELETE' });
       if (res.ok) {
         toast.success('Vendedor eliminado correctamente.');
         cargarVendedores();
@@ -82,7 +82,7 @@ export default function VendedoresPage() {
   const registrarVendedor = async () => {
     setRegistrando(true);
     try {
-      const res = await fetch(`${API_URL}/api/vendedores`, {
+      const res = await apiFetch(`${API_URL}/api/vendedores`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(nuevoVendedor),

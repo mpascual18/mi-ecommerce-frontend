@@ -7,7 +7,7 @@ import Button from '@/components/ui/Button';
 import FormField from '@/components/ui/FormField';
 import { useToast } from '@/components/ui/ToastProvider';
 import { useConfirm } from '@/components/ui/ConfirmDialogProvider';
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
 
 const PRODUCTO_VACIO = {
   nombre: '',
@@ -152,7 +152,7 @@ export default function ModificarInventarioPage() {
   const obtenerProductos = async () => {
     setCargando(true);
     try {
-      const res = await fetch(`${API_URL}/api/productos`);
+      const res = await apiFetch(`${API_URL}/api/productos`);
       const data = await res.json();
       setProductos(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -209,7 +209,7 @@ const PLANTILLA_DESCRIPCION_DEFAULT = `<p style="text-align: center;"><strong>ðŸ
             : null,
       };
 
-      const res = await fetch(`${API_URL}/api/productos/${productoOfertaSeleccionado.id}`, {
+      const res = await apiFetch(`${API_URL}/api/productos/${productoOfertaSeleccionado.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -437,7 +437,7 @@ const PLANTILLA_DESCRIPCION_DEFAULT = `<p style="text-align: center;"><strong>ðŸ
             : null,
       };
 
-      const res = await fetch(`${API_URL}/api/productos${esNuevo ? '' : `/${productoEditando.id}`}`, {
+      const res = await apiFetch(`${API_URL}/api/productos${esNuevo ? '' : `/${productoEditando.id}`}`, {
         method: esNuevo ? 'POST' : 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -476,7 +476,7 @@ const PLANTILLA_DESCRIPCION_DEFAULT = `<p style="text-align: center;"><strong>ðŸ
 
     setEliminando(true);
     try {
-      const res = await fetch(`${API_URL}/api/productos/${productoEditando.id}`, {
+      const res = await apiFetch(`${API_URL}/api/productos/${productoEditando.id}`, {
         method: 'DELETE',
       });
 

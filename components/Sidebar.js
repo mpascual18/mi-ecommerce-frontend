@@ -101,6 +101,7 @@ const Sidebar = () => {
           onClick={() => {
             try {
               localStorage.removeItem('pyr_user');
+              localStorage.removeItem('pyr_token');
             } catch (e) {}
             window.location.href = '/login';
           }}

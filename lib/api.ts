@@ -18,3 +18,29 @@ export function getApiUrl(): string {
 
 export const API_URL = getApiUrl();
 
+// Envoltorio de fetch para las páginas del panel (CRM/ERP): agrega
+// automáticamente el token de sesión guardado al iniciar sesión, y si el
+// backend responde 401 (sesión vencida/inválida) limpia la sesión y manda
+// al usuario de vuelta a /login. La tienda pública (catálogo, checkout)
+// no usa esto — sigue con fetch normal, sin sesión.
+export async function apiFetch(input: string, init: RequestInit = {}): Promise<Response> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('pyr_token') : null;
+
+  const headers = new Headers(init.headers || {});
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  const res = await fetch(input, { ...init, headers });
+
+  if (res.status === 401 && typeof window !== 'undefined') {
+    localStorage.removeItem('pyr_user');
+    localStorage.removeItem('pyr_token');
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
+  }
+
+  return res;
+}
+

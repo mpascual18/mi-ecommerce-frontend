@@ -1,4 +1,4 @@
-import { API_URL } from './api';
+import { API_URL, apiFetch } from './api';
 
 export type Agencia = {
   id: number;
@@ -14,7 +14,7 @@ const cache: Record<string, Agencia[]> = {};
 
 export async function getAgencias(empresa: string): Promise<Agencia[]> {
   if (cache[empresa]) return cache[empresa];
-  const res = await fetch(`${API_URL}/api/agencias?empresa=${encodeURIComponent(empresa)}`);
+  const res = await apiFetch(`${API_URL}/api/agencias?empresa=${encodeURIComponent(empresa)}`);
   const data = await res.json();
   const list = Array.isArray(data) ? data : [];
   cache[empresa] = list;

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import FormField from '@/components/ui/FormField';
 import Button from '@/components/ui/Button';
 import { useToast } from '@/components/ui/ToastProvider';
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
 
 const CAMPOS = [
   { name: 'nombre', label: 'Nombre', type: 'text', required: true },
@@ -49,7 +49,7 @@ export default function AgregarProductoPage() {
         if (payload[campo] === '') payload[campo] = null;
       });
 
-      const res = await fetch(`${API_URL}/api/productos`, {
+      const res = await apiFetch(`${API_URL}/api/productos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
